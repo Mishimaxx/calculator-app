@@ -41,6 +41,16 @@ class CalculatorViewModel(
 
     // 履歴データ
     val recentEntries: Flow<List<CalculationEntry>> = repository.getRecentEntries()
+    
+    // 前回の計算結果を保持
+    private var lastResult: String = "0"
+    
+    // メモリ機能
+    private var memoryValue: String = "0"
+
+    // 指数入力プレースホルダーフラグ
+    private var isExponentPlaceholderActive = false
+    private val exponentPlaceholder = "□"
 
     /**
      * 表示用に式を変換する（*→×、/→÷）
@@ -183,6 +193,16 @@ class CalculatorViewModel(
      * 数字ボタンが押された時の処理
      */
     fun onNumberClicked(number: String) {
+        if (isExponentPlaceholderActive && _displayText.value.endsWith(exponentPlaceholder)) {
+            // プレースホルダーを数字で置き換える
+            _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length) + number
+            _expression.value += number
+            isExponentPlaceholderActive = false
+            // プレビュー結果を更新
+            updatePreviewResult()
+            return
+        }
+
         if (_isResultShowing.value) {
             // 計算結果が表示されている場合、新しい計算を開始
             _displayText.value = number
@@ -216,6 +236,13 @@ class CalculatorViewModel(
      * 演算子ボタンが押された時の処理
      */
     fun onOperatorClicked(operator: String) {
+        if (isExponentPlaceholderActive) {
+            // プレースホルダーが残っている場合は削除
+            if (_displayText.value.endsWith(exponentPlaceholder)) {
+                _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length)
+            }
+            isExponentPlaceholderActive = false
+        }
         if (_isResultShowing.value) {
             // 計算結果が表示されている場合、その結果を使って新しい式を開始
             _expression.value = _displayText.value + " $operator "
@@ -238,11 +265,20 @@ class CalculatorViewModel(
      * 等号ボタンが押された時の処理
      */
     fun onEqualsClicked() {
+        if (isExponentPlaceholderActive) {
+            if (_displayText.value.endsWith(exponentPlaceholder)) {
+                _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length)
+            }
+            isExponentPlaceholderActive = false
+        }
         val result = calculationEngine.evaluate(_expression.value)
         _displayText.value = result
         
         // 計算履歴に保存（エラーでない場合）
         if (!result.contains("Error") && result != "Division by Zero" && result != "Overflow Error") {
+            // 前回の結果を保存
+            lastResult = result
+            
             viewModelScope.launch {
                 val entry = CalculationEntry(
                     expression = _expression.value,
@@ -295,6 +331,14 @@ class CalculatorViewModel(
      * 小数点ボタンが押された時の処理
      */
     fun onDecimalClicked() {
+        if (isExponentPlaceholderActive && _displayText.value.endsWith(exponentPlaceholder)) {
+            // プレースホルダーを小数点で置換
+            _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length) + "0."
+            _expression.value += "0."
+            isExponentPlaceholderActive = false
+            updatePreviewResult()
+            return
+        }
         if (_isResultShowing.value) {
             _displayText.value = "0."
             _expression.value = "0."
@@ -334,70 +378,279 @@ class CalculatorViewModel(
      * 科学計算関数（sin, cos, tan等）
      */
     fun onScientificFunctionClicked(function: String) {
+        when (function) {
+            "sin", "cos", "tan", "asin", "acos", "atan" -> {
+                // 三角関数
+                _expression.value += "$function("
+                _displayText.value += "$function("
+                _shouldResetOnNextInput.value = false
+            }
+            "sinh", "cosh", "tanh", "asinh", "acosh", "atanh" -> {
+                // 双曲線関数
+                _expression.value += "$function("
+                _displayText.value += "$function("
+                _shouldResetOnNextInput.value = false
+            }
+            "ln", "log" -> {
+                // 対数関数
+                _expression.value += "$function("
+                _displayText.value += "$function("
+                _shouldResetOnNextInput.value = false
+            }
+            "logbase" -> {
+                // 底を指定する対数
+                _expression.value += "log("
+                _displayText.value += "log("
+                _shouldResetOnNextInput.value = false
+            }
+            "10^x" -> {
+                // 10のべき乗：プレースホルダーを用意
+                _expression.value += "10^"
+                _displayText.value += "10^$exponentPlaceholder"
+                isExponentPlaceholderActive = true
+                _shouldResetOnNextInput.value = false
+            }
+            "e^x" -> {
+                // ネイピア数のべき乗：プレースホルダーを用意
+                _expression.value += "e^"
+                _displayText.value += "e^$exponentPlaceholder"
+                isExponentPlaceholderActive = true
+                _shouldResetOnNextInput.value = false
+            }
+            "exp" -> {
+                // e^x と同等機能
+                _expression.value += "e^"
+                _displayText.value += "e^$exponentPlaceholder"
+                isExponentPlaceholderActive = true
+                _shouldResetOnNextInput.value = false
+            }
+            "sqrt", "cbrt" -> {
+                // 平方根・立方根
+                if (function == "sqrt") {
+                    _expression.value += "sqrt("
+                    _displayText.value += "√("
+                } else {
+                    _expression.value += "cbrt("
+                    _displayText.value += "³√("
+                }
+                _shouldResetOnNextInput.value = false
+            }
+            "^", "^2", "^3" -> {
+                // べき乗
+                if (function == "^2") {
+                    _expression.value += "^2"
+                    _displayText.value += "²"
+                } else if (function == "^3") {
+                    _expression.value += "^3"
+                    _displayText.value += "³"
+                } else {
+                    // 一般べき乗：プレースホルダーを表示
+                    _expression.value += "^"
+                    _displayText.value += "^$exponentPlaceholder"
+                    isExponentPlaceholderActive = true
+                }
+                _shouldResetOnNextInput.value = false
+            }
+            "!" -> {
+                // 階乗
+                _expression.value += "!"
+                _displayText.value += "!"
+                _shouldResetOnNextInput.value = false
+            }
+            "+/-" -> {
+                // 符号変更
+                if (_isResultShowing.value) {
+                    val current = _displayText.value
+                    if (current.startsWith("-")) {
+                        _displayText.value = current.substring(1)
+                        _expression.value = current.substring(1)
+                    } else if (current != "0" && current.isNotEmpty()) {
+                        _displayText.value = "-$current"
+                        _expression.value = "-$current"
+                    }
+                    _isResultShowing.value = false
+                } else {
+                    // 負の数の入力を開始
+                    if (_shouldResetOnNextInput.value) {
+                        _displayText.value = "-"
+                        _expression.value += "-"
+                        _shouldResetOnNextInput.value = false
+                    } else {
+                        val current = _displayText.value
+                        if (current.startsWith("-")) {
+                            _displayText.value = current.substring(1)
+                            // 式の最後の部分も更新
+                            if (_expression.value.endsWith(current)) {
+                                _expression.value = _expression.value.dropLast(current.length) + current.substring(1)
+                            }
+                        } else if (current.isNotEmpty()) {
+                            _displayText.value = "-$current"
+                            // 式の最後の部分も更新
+                            if (_expression.value.endsWith(current)) {
+                                _expression.value = _expression.value.dropLast(current.length) + "-$current"
+                            }
+                        }
+                    }
+                }
+            }
+            "integral" -> {
+                // 積分（暫定的に実装）
+                _expression.value += "∫("
+                _displayText.value += "∫("
+                _shouldResetOnNextInput.value = false
+            }
+            "d/dx" -> {
+                // 微分（暫定的に実装）
+                _expression.value += "d/dx("
+                _displayText.value += "d/dx("
+                _shouldResetOnNextInput.value = false
+            }
+            "nPr", "nCr" -> {
+                // 順列・組み合わせ（暫定的に実装）
+                _expression.value += "$function("
+                _displayText.value += "$function("
+                _shouldResetOnNextInput.value = false
+            }
+            "EXP" -> {
+                // ×10^x（指数入力）
+                _expression.value += "E"
+                _displayText.value += "×10^"
+                _shouldResetOnNextInput.value = false
+            }
+            "ANS" -> {
+                // 前回の答え
+                if (_isResultShowing.value) {
+                    // 結果が表示されている場合は何もしない
+                    return
+                }
+                
+                _expression.value += lastResult
+                _displayText.value = lastResult
+                _shouldResetOnNextInput.value = false
+            }
+            "STO" -> {
+                // メモリに保存
+                memoryValue = _displayText.value
+            }
+            "RCL" -> {
+                // メモリから呼び出し
+                if (_isResultShowing.value) {
+                    _displayText.value = memoryValue
+                    _expression.value = memoryValue
+                    _isResultShowing.value = false
+                } else if (_shouldResetOnNextInput.value) {
+                    _displayText.value = memoryValue
+                    _expression.value += memoryValue
+                    _shouldResetOnNextInput.value = false
+                } else {
+                    _displayText.value = memoryValue
+                    _expression.value += memoryValue
+                }
+            }
+            "M+", "M-" -> {
+                // メモリ加算・減算
+                val currentValue = try {
+                    _displayText.value.toDoubleOrNull() ?: 0.0
+                } catch (e: Exception) {
+                    0.0
+                }
+                
+                val memValue = try {
+                    memoryValue.toDoubleOrNull() ?: 0.0
+                } catch (e: Exception) {
+                    0.0
+                }
+                
+                memoryValue = if (function == "M+") {
+                    (memValue + currentValue).toString()
+                } else {
+                    (memValue - currentValue).toString()
+                }
+            }
+            "MC" -> {
+                // メモリクリア
+                memoryValue = "0"
+            }
+            "MR" -> {
+                // メモリ読み出し（RCLと同じ）
+                onScientificFunctionClicked("RCL")
+            }
+            "ENG" -> {
+                // エンジニアリング記法（暫定的に実装）
+                // 現状では表示のみ
+            }
+            "S⇔D" -> {
+                // 分数⇔小数変換（暫定的に実装）
+                // 現状では表示のみ
+            }
+            "dms" -> {
+                // 度分秒変換（暫定的に実装）
+                // 現状では表示のみ
+            }
+            "deg", "rad" -> {
+                // 角度単位切り替え（暫定的に実装）
+                // 現状では表示のみ
+            }
+            "1/x" -> {
+                // 逆数
+                _expression.value += "1/("
+                _displayText.value += "1/("
+                _shouldResetOnNextInput.value = false
+            }
+            "yroot" -> {
+                // y乗根（暫定的に実装）
+                _expression.value += "^(1/"
+                _displayText.value += "^(1/"
+                _shouldResetOnNextInput.value = false
+            }
+        }
+        updatePreviewResult()
+    }
+
+    /**
+     * 進数変換ボタンが押された時の処理
+     */
+    fun onBaseConversionClicked(base: String) {
+        // 現在の数値を取得して進数変換（暫定的に実装）
+        val currentValue = _displayText.value
         try {
-            val currentValue = _displayText.value.toDouble()
-            val result = when (function) {
-                "sin" -> calculationEngine.sin(currentValue)
-                "cos" -> calculationEngine.cos(currentValue)
-                "tan" -> calculationEngine.tan(currentValue)
-                "log" -> calculationEngine.log(currentValue)
-                "ln" -> calculationEngine.ln(currentValue)
-                "sqrt" -> calculationEngine.sqrt(currentValue)
+            val decimalValue = when {
+                currentValue.startsWith("0x") -> currentValue.substring(2).toLong(16)
+                currentValue.startsWith("0") && currentValue.length > 1 && currentValue.all { it.isDigit() } -> currentValue.toLong(8)
+                currentValue.all { it in "01" } -> currentValue.toLong(2)
+                else -> currentValue.toLongOrNull() ?: return
+            }
+            
+            val convertedValue = when (base) {
+                "HEX" -> "0x${decimalValue.toString(16).uppercase()}"
+                "DEC" -> decimalValue.toString()
+                "OCT" -> "0${decimalValue.toString(8)}"
+                "BIN" -> decimalValue.toString(2)
                 else -> currentValue
             }
             
-            val formattedResult = when {
-                result.isNaN() || result.isInfinite() -> "Math Error"
-                else -> String.format("%.10g", result)
-            }
-            
-            _displayText.value = formattedResult
-            _expression.value = "$function($currentValue)"
-            _isResultShowing.value = true
-            
+            _displayText.value = convertedValue
+            _expression.value = decimalValue.toString() // 内部計算用は10進数で保持
+            _shouldResetOnNextInput.value = true
         } catch (e: Exception) {
-            _displayText.value = "Error"
+            // 変換に失敗した場合は何もしない
         }
     }
 
     /**
-     * 進数変換
+     * 履歴をすべてクリア
      */
-    fun onBaseConversionClicked(targetBase: String) {
-        try {
-            val currentValue = _displayText.value.toLong()
-            val result = when (targetBase) {
-                "BIN" -> calculationEngine.toBinary(currentValue)
-                "HEX" -> calculationEngine.toHex(currentValue)
-                "OCT" -> calculationEngine.toOctal(currentValue)
-                else -> currentValue.toString()
-            }
-            
-            _displayText.value = result
-            _expression.value = "DEC($currentValue) → $targetBase"
-            _isResultShowing.value = true
-            
-        } catch (e: Exception) {
-            _displayText.value = "Error"
-        }
+    fun clearAllHistory() {
+        // 履歴機能（暫定的に実装）
+        // 現状では何もしない
     }
 
     /**
      * 履歴エントリを削除
      */
-    fun deleteHistoryEntry(entry: CalculationEntry) {
-        viewModelScope.launch {
-            repository.deleteEntry(entry)
-        }
-    }
-
-    /**
-     * 全履歴を削除
-     */
-    fun clearAllHistory() {
-        viewModelScope.launch {
-            repository.deleteAllEntries()
-        }
+    fun deleteHistoryEntry(id: Long) {
+        // 履歴機能（暫定的に実装）
+        // 現状では何もしない
     }
 
     /**

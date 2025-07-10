@@ -40,6 +40,14 @@ fun MainCalculatorScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    
+    // 電卓の名前を決定
+    val calculatorName = when (selectedTab) {
+        0 -> "一般電卓"
+        1 -> "関数電卓"
+        2 -> "履歴"
+        else -> "一般電卓"
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -61,7 +69,7 @@ fun MainCalculatorScreen(
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("基本", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { Text("一般電卓", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 0,
                         onClick = { 
                             selectedTab = 0
@@ -76,7 +84,7 @@ fun MainCalculatorScreen(
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("関数", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { Text("関数電卓", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 1,
                         onClick = { 
                             selectedTab = 1
@@ -91,25 +99,10 @@ fun MainCalculatorScreen(
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("進数", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { Text("履歴", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 2,
                         onClick = { 
                             selectedTab = 2
-                            viewModel.setCalculationType(CalculationType.PROGRAMMER)
-                            scope.launch { drawerState.close() }
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
-                            unselectedContainerColor = Color.Transparent
-                        ),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                    
-                    NavigationDrawerItem(
-                        label = { Text("履歴", color = if (isDarkTheme) Color.White else Color.Black) },
-                        selected = selectedTab == 3,
-                        onClick = { 
-                            selectedTab = 3
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
@@ -159,26 +152,39 @@ fun MainCalculatorScreen(
                 .background(if (isDarkTheme) Color(0xFF1C1C1E) else Color.White) // テーマに応じた背景色
                 .padding(0.dp) // 16dpから0dpに変更（端を削除）
         ) {
-            // ハンバーガーメニューボタン
+            // ヘッダー部分（ハンバーガーメニューと電卓名）
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), // 内側のパディングのみ保持
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { 
-                        scope.launch { 
-                            if (drawerState.isClosed) {
-                                drawerState.open()
-                            } else {
-                                drawerState.close()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { 
+                            scope.launch { 
+                                if (drawerState.isClosed) {
+                                    drawerState.open()
+                                } else {
+                                    drawerState.close()
+                                }
                             }
                         }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "メニュー",
+                            tint = if (isDarkTheme) Color.White else Color.Black
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "メニュー",
-                        tint = if (isDarkTheme) Color.White else Color.Black
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = calculatorName,
+                        color = if (isDarkTheme) Color.White else Color.Black,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
             }
@@ -188,8 +194,7 @@ fun MainCalculatorScreen(
             when (selectedTab) {
                 0 -> BasicCalculatorTab(viewModel)
                 1 -> ScientificCalculatorTab(viewModel)
-                2 -> ProgrammerCalculatorTab(viewModel)
-                3 -> HistoryTab(viewModel)
+                2 -> HistoryTab(viewModel)
             }
         }
     }
@@ -222,134 +227,21 @@ fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
 fun ScientificCalculatorTab(viewModel: CalculatorViewModel) {
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // 表示部分
+        // 表示部分（関数電卓用）- より小さく
         CalculatorDisplay(
             displayText = formatNumberWithCommas(viewModel.displayText.value),
             expression = viewModel.displayExpression,
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
-            modifier = Modifier.weight(0.3f)
+            modifier = Modifier.weight(0.2f) // 0.3fから0.2fに縮小
         )
-
-        // 科学計算ボタン
-        Column(
-            modifier = Modifier.weight(0.3f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CalculatorButton(
-                    text = "sin",
-                    onClick = { viewModel.onScientificFunctionClicked("sin") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "cos",
-                    onClick = { viewModel.onScientificFunctionClicked("cos") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "tan",
-                    onClick = { viewModel.onScientificFunctionClicked("tan") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "√",
-                    onClick = { viewModel.onScientificFunctionClicked("sqrt") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CalculatorButton(
-                    text = "log",
-                    onClick = { viewModel.onScientificFunctionClicked("log") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "ln",
-                    onClick = { viewModel.onScientificFunctionClicked("ln") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "π",
-                    onClick = { viewModel.onNumberClicked("3.14159") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-                CalculatorButton(
-                    text = "e",
-                    onClick = { viewModel.onNumberClicked("2.71828") },
-                    modifier = Modifier.weight(1f),
-                    isOperator = true
-                )
-            }
-        }
-
-        // 基本キーパッド
-        BasicKeypad(
+        
+        // 関数電卓キーパッド - より大きく
+        ScientificKeypad(
             viewModel = viewModel,
-            modifier = Modifier.weight(0.4f)
-        )
-    }
-}
-
-@Composable
-fun ProgrammerCalculatorTab(viewModel: CalculatorViewModel) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // 表示部分
-        CalculatorDisplay(
-            displayText = formatNumberWithCommas(viewModel.displayText.value),
-            expression = viewModel.displayExpression,
-            previewResult = viewModel.formattedPreviewResult,
-            isResultShowing = viewModel.isResultShowing.value,
-            modifier = Modifier.weight(0.3f)
-        )
-
-        // 進数変換ボタン
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CalculatorButton(
-                text = "BIN",
-                onClick = { viewModel.onBaseConversionClicked("BIN") },
-                modifier = Modifier.weight(1f),
-                isOperator = true
-            )
-            CalculatorButton(
-                text = "OCT",
-                onClick = { viewModel.onBaseConversionClicked("OCT") },
-                modifier = Modifier.weight(1f),
-                isOperator = true
-            )
-            CalculatorButton(
-                text = "HEX",
-                onClick = { viewModel.onBaseConversionClicked("HEX") },
-                modifier = Modifier.weight(1f),
-                isOperator = true
-            )
-        }
-
-        // 基本キーパッド
-        BasicKeypad(
-            viewModel = viewModel,
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.8f) // 0.7fから0.8fに拡大
         )
     }
 }
@@ -398,7 +290,7 @@ fun HistoryTab(viewModel: CalculatorViewModel) {
                 items(entries) { entry ->
                     HistoryItem(
                         entry = entry,
-                        onDelete = { viewModel.deleteHistoryEntry(entry) }
+                        onDelete = { viewModel.deleteHistoryEntry(entry.id) }
                     )
                 }
             }

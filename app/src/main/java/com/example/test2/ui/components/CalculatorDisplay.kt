@@ -98,7 +98,7 @@ fun CalculatorDisplay(
                 val resultText = if (isResultShowing) displayText else if (previewResult.isNotEmpty()) previewResult else displayText
                 val resultFontSize = calculateFontSize(resultText, if (isResultShowing) 36f else 26f, 20) // より大きく
                 Text(
-                    text = "=$resultText", // スペースを削除してより密接に
+                    text = if (!isResultShowing && previewResult.isNotEmpty()) "=$resultText" else resultText, // スペースを削除してより密接に
                     fontSize = resultFontSize.sp,
                     color = if (isResultShowing) Color(0xFFFF6B6B) else Color(0xFFA0A0A0), // =押した後は赤色、途中はグレー
                     textAlign = TextAlign.End,

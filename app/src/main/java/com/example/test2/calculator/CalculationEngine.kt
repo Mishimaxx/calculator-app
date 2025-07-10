@@ -6,6 +6,13 @@ import kotlin.math.*
  * 計算エンジン - 式の評価と各種計算機能を提供
  */
 class CalculationEngine {
+    
+    // 角度モード（ラジアン/度）
+    enum class AngleMode {
+        DEGREES, RADIANS
+    }
+    
+    private var angleMode = AngleMode.DEGREES
 
     /**
      * 基本的な数式を評価
@@ -14,7 +21,15 @@ class CalculationEngine {
      */
     fun evaluate(expression: String): String {
         return try {
-            val result = evaluateExpression(expression.replace(" ", ""))
+            var processedExpression = expression.replace(" ", "")
+            
+            // 科学記法（E表記）を処理
+            processedExpression = processedExpression.replace("E", "*10^")
+            
+            // 関数を処理
+            processedExpression = processFunctions(processedExpression)
+            
+            val result = evaluateExpression(processedExpression)
             
             // 結果が非常に大きい場合（10^10以上）のチェック
             if (abs(result) >= 1e10) {
@@ -30,17 +45,220 @@ class CalculationEngine {
             "Error"
         }
     }
+    
+    /**
+     * 関数呼び出しを処理
+     */
+    private fun processFunctions(expression: String): String {
+        var result = expression
+        
+        // 定数の置換（単独のπとeのみ対象）
+        result = result.replace("π", Math.PI.toString())
+        // 'e' は英字に挟まれていない単独文字を定数として扱う
+        result = result.replace(Regex("(?<![A-Za-z])e(?![A-Za-z])"), Math.E.toString())
+        
+        // 関数のパターンを処理
+        val functionPatterns = listOf(
+            // 双曲線関数（逆関数を先に処理）
+            "asinh" to ::asinh,
+            "acosh" to ::acosh,
+            "atanh" to ::atanh,
+            "sinh" to ::sinh,
+            "cosh" to ::cosh,
+            "tanh" to ::tanh,
+            
+            // 逆三角関数
+            "asin" to ::asin,
+            "acos" to ::acos,
+            "atan" to ::atan,
+            
+            // 三角関数
+            "sin" to ::sin,
+            "cos" to ::cos,
+            "tan" to ::tan,
+            
+            // 対数関数
+            "ln" to ::ln,
+            "log" to ::log,
+            
+            // 平方根・立方根
+            "cbrt" to ::cbrt,
+            "sqrt" to ::sqrt,
+            
+            // 指数関数
+            "exp" to ::exp
+        )
+        
+        for ((funcName, func) in functionPatterns) {
+            result = processFunction(result, funcName, func)
+        }
+        
+        // 階乗の処理
+        result = processFactorial(result)
+        
+        // べき乗の処理
+        result = processPower(result)
+        
+        return result
+    }
+    
+    private fun processFunction(expression: String, funcName: String, func: (Double) -> Double): String {
+        var result = expression
+        val pattern = "$funcName\\(([^)]+)\\)".toRegex()
+        
+        while (pattern.containsMatchIn(result)) {
+            val match = pattern.find(result)!!
+            val argument = match.groupValues[1]
+            val argValue = evaluateExpression(argument)
+            val funcResult = func(argValue)
+            result = result.replace(match.value, funcResult.toString())
+        }
+        
+        return result
+    }
+    
+    private fun processFactorial(expression: String): String {
+        var result = expression
+        val pattern = "(\\d+)!".toRegex()
+        
+        while (pattern.containsMatchIn(result)) {
+            val match = pattern.find(result)!!
+            val number = match.groupValues[1].toInt()
+            val factorialResult = factorial(number)
+            result = result.replace(match.value, factorialResult.toString())
+        }
+        
+        return result
+    }
+    
+    private fun processPower(expression: String): String {
+        var result = expression
+        
+        // ^2, ^3などの特殊なべき乗
+        result = result.replace("^2", "^(2)")
+        result = result.replace("^3", "^(3)")
+        
+        // 一般的なべき乗（^）
+        while (result.contains("^")) {
+            val index = result.indexOf("^")
+            
+            // 基数を取得
+            var baseStart = index - 1
+            var parenCount = 0
+            while (baseStart >= 0) {
+                val char = result[baseStart]
+                if (char == ')') parenCount++
+                else if (char == '(') parenCount--
+                
+                if (parenCount == 0 && (char in setOf('+', '-', '*', '/', '(') && baseStart < index - 1)) {
+                    baseStart++
+                    break
+                }
+                baseStart--
+            }
+            if (baseStart < 0) baseStart = 0
+            
+            // 指数を取得
+            var expEnd = index + 1
+            parenCount = 0
+            if (expEnd < result.length && result[expEnd] == '(') {
+                parenCount = 1
+                expEnd++
+                while (expEnd < result.length && parenCount > 0) {
+                    when (result[expEnd]) {
+                        '(' -> parenCount++
+                        ')' -> parenCount--
+                    }
+                    expEnd++
+                }
+            } else {
+                while (expEnd < result.length && 
+                       (result[expEnd].isDigit() || result[expEnd] == '.' || 
+                        (expEnd == index + 1 && result[expEnd] == '-'))) {
+                    expEnd++
+                }
+            }
+            
+            val base = result.substring(baseStart, index)
+            val exponent = result.substring(index + 1, expEnd)
+                .removeSurrounding("(", ")")
+            
+            val baseValue = evaluateExpression(base)
+            val expValue = evaluateExpression(exponent)
+            val powerResult = baseValue.pow(expValue)
+            
+            result = result.substring(0, baseStart) + 
+                    powerResult.toString() + 
+                    result.substring(expEnd)
+        }
+        
+        return result
+    }
 
     /**
      * 科学計算関数
      */
-    fun sin(value: Double): Double = kotlin.math.sin(Math.toRadians(value))
-    fun cos(value: Double): Double = kotlin.math.cos(Math.toRadians(value))
-    fun tan(value: Double): Double = kotlin.math.tan(Math.toRadians(value))
+    fun sin(value: Double): Double = kotlin.math.sin(toRadians(value))
+    fun cos(value: Double): Double = kotlin.math.cos(toRadians(value))
+    fun tan(value: Double): Double = kotlin.math.tan(toRadians(value))
+    
+    fun asin(value: Double): Double = fromRadians(kotlin.math.asin(value))
+    fun acos(value: Double): Double = fromRadians(kotlin.math.acos(value))
+    fun atan(value: Double): Double = fromRadians(kotlin.math.atan(value))
+    
+    fun sinh(value: Double): Double = kotlin.math.sinh(value)
+    fun cosh(value: Double): Double = kotlin.math.cosh(value)
+    fun tanh(value: Double): Double = kotlin.math.tanh(value)
+    
+    fun asinh(value: Double): Double = kotlin.math.asinh(value)
+    fun acosh(value: Double): Double = kotlin.math.acosh(value)
+    fun atanh(value: Double): Double = kotlin.math.atanh(value)
+    
     fun log(value: Double): Double = log10(value)
     fun ln(value: Double): Double = kotlin.math.ln(value)
+    fun exp(value: Double): Double = kotlin.math.exp(value)
+    
     fun sqrt(value: Double): Double = kotlin.math.sqrt(value)
+    fun cbrt(value: Double): Double = kotlin.math.cbrt(value)
+    
     fun power(base: Double, exponent: Double): Double = base.pow(exponent)
+    
+    fun factorial(n: Int): Long {
+        if (n < 0) throw IllegalArgumentException("Factorial is not defined for negative numbers")
+        if (n > 20) throw IllegalArgumentException("Factorial too large")
+        
+        var result = 1L
+        for (i in 2..n) {
+            result *= i
+        }
+        return result
+    }
+    
+    /**
+     * 角度変換ヘルパー関数
+     */
+    private fun toRadians(degrees: Double): Double {
+        return if (angleMode == AngleMode.DEGREES) {
+            Math.toRadians(degrees)
+        } else {
+            degrees
+        }
+    }
+    
+    private fun fromRadians(radians: Double): Double {
+        return if (angleMode == AngleMode.DEGREES) {
+            Math.toDegrees(radians)
+        } else {
+            radians
+        }
+    }
+    
+    /**
+     * 角度モードを設定
+     */
+    fun setAngleMode(mode: AngleMode) {
+        angleMode = mode
+    }
 
     /**
      * プログラマ向け関数
