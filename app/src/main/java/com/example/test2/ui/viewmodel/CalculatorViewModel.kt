@@ -111,21 +111,20 @@ class CalculatorViewModel(
         val expr = _expression.value
         
         if (expr.isNotEmpty() && !_isResultShowing.value) {
-            try {
-                // 演算子を含む完全な式の場合（例：「33+22」）
-                if ((expr.contains('+') || expr.contains('-') || expr.contains('*') || 
-                     expr.contains('/') || expr.contains('%')) && 
-                    !expr.trim().endsWith('+') && !expr.trim().endsWith('-') && 
-                    !expr.trim().endsWith('*') && !expr.trim().endsWith('/') && 
-                    !expr.trim().endsWith('%')) {
-                    val result = calculationEngine.evaluate(expr)
-                    if (!result.contains("Error") && result != "Division by Zero" && 
-                        result != "Overflow Error") {
-                        _previewResult.value = result
-                    } else {
-                        _previewResult.value = ""
-                    }
+            try {            // 演算子を含む完全な式の場合（例：「33+22」）
+            if ((expr.contains('+') || expr.contains('-') || expr.contains('*') ||
+                 expr.contains('/') || expr.contains('%')) &&
+                !expr.trim().endsWith('+') && !expr.trim().endsWith('-') &&
+                !expr.trim().endsWith('*') && !expr.trim().endsWith('/') &&
+                !expr.trim().endsWith('%')) {
+                val result = calculationEngine.evaluate(expr)
+                if (!result.contains("Error") && result != "Division by Zero" &&
+                    result != "Overflow Error" && result != "Math Error") {
+                    _previewResult.value = result
+                } else {
+                    _previewResult.value = "" // 3÷0などのエラー時は何も表示しない
                 }
+            }
                 // 演算子で終わっている場合（例：「33+」）は演算子の前の数値を表示
                 else if (expr.trim().endsWith('+') || expr.trim().endsWith('-') || 
                          expr.trim().endsWith('*') || expr.trim().endsWith('/') || 

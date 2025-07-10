@@ -9,10 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.test2.ui.screens.MainCalculatorScreen
+import com.example.test2.ui.screens.SettingsScreen
 import com.example.test2.ui.theme.Test2Theme
 
 class MainActivity : ComponentActivity() {
@@ -20,11 +21,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Test2Theme {
+            // ダークモードの状態管理（デフォルトでダークモード）
+            var isDarkTheme by remember { mutableStateOf(true) }
+            var showSettings by remember { mutableStateOf(false) }
+            
+            Test2Theme(darkTheme = isDarkTheme) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainCalculatorScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    if (showSettings) {
+                        SettingsScreen(
+                            isDarkTheme = isDarkTheme,
+                            onThemeToggle = { isDarkTheme = it },
+                            onBackClick = { showSettings = false },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    } else {
+                        MainCalculatorScreen(
+                            isDarkTheme = isDarkTheme,
+                            onSettingsClick = { showSettings = true },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
                 }
             }
         }
@@ -35,6 +51,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GreetingPreview() {
     Test2Theme {
-        MainCalculatorScreen()
+        MainCalculatorScreen(
+            isDarkTheme = true,
+            onSettingsClick = {}
+        )
     }
 }

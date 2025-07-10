@@ -28,6 +28,8 @@ import com.example.test2.data.model.CalculationType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainCalculatorScreen(
+    isDarkTheme: Boolean = true,
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -42,7 +44,10 @@ fun MainCalculatorScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White,
+                drawerContentColor = if (isDarkTheme) Color.White else Color.Black
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -51,49 +56,97 @@ fun MainCalculatorScreen(
                     Text(
                         text = "電卓メニュー",
                         style = MaterialTheme.typography.headlineSmall,
+                        color = if (isDarkTheme) Color.White else Color.Black,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("基本") },
+                        label = { Text("基本", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 0,
                         onClick = { 
                             selectedTab = 0
                             viewModel.setCalculationType(CalculationType.BASIC)
                             scope.launch { drawerState.close() }
                         },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            unselectedContainerColor = Color.Transparent
+                        ),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("関数") },
+                        label = { Text("関数", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 1,
                         onClick = { 
                             selectedTab = 1
                             viewModel.setCalculationType(CalculationType.SCIENTIFIC)
                             scope.launch { drawerState.close() }
                         },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            unselectedContainerColor = Color.Transparent
+                        ),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("進数") },
+                        label = { Text("進数", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 2,
                         onClick = { 
                             selectedTab = 2
                             viewModel.setCalculationType(CalculationType.PROGRAMMER)
                             scope.launch { drawerState.close() }
                         },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            unselectedContainerColor = Color.Transparent
+                        ),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("履歴") },
+                        label = { Text("履歴", color = if (isDarkTheme) Color.White else Color.Black) },
                         selected = selectedTab == 3,
                         onClick = { 
                             selectedTab = 3
                             scope.launch { drawerState.close() }
                         },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            unselectedContainerColor = Color.Transparent
+                        ),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        color = if (isDarkTheme) Color(0xFF444444) else Color(0xFFE0E0E0)
+                    )
+                    
+                    NavigationDrawerItem(
+                        label = { 
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "設定",
+                                    tint = if (isDarkTheme) Color.White else Color.Black
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("設定", color = if (isDarkTheme) Color.White else Color.Black)
+                            }
+                        },
+                        selected = false,
+                        onClick = { 
+                            onSettingsClick()
+                            scope.launch { drawerState.close() }
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = Color.Transparent,
+                            unselectedContainerColor = Color.Transparent
+                        ),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
@@ -103,7 +156,7 @@ fun MainCalculatorScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color(0xFF1C1C1E)) // ダーク背景
+                .background(if (isDarkTheme) Color(0xFF1C1C1E) else Color.White) // テーマに応じた背景色
                 .padding(0.dp) // 16dpから0dpに変更（端を削除）
         ) {
             // ハンバーガーメニューボタン
@@ -125,7 +178,7 @@ fun MainCalculatorScreen(
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "メニュー",
-                        tint = Color.White
+                        tint = if (isDarkTheme) Color.White else Color.Black
                     )
                 }
             }
