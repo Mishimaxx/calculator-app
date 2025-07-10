@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Test2"
+rootProject.name = "Kadai_05_PI12A082_36_mishima"
 include(":app")
  

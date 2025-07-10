@@ -104,11 +104,11 @@ fun MainCalculatorScreen(
             modifier = modifier
                 .fillMaxSize()
                 .background(Color(0xFF1C1C1E)) // ダーク背景
-                .padding(16.dp)
+                .padding(0.dp) // 16dpから0dpに変更（端を削除）
         ) {
             // ハンバーガーメニューボタン
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), // 内側のパディングのみ保持
                 horizontalArrangement = Arrangement.Start
             ) {
                 IconButton(
@@ -130,7 +130,7 @@ fun MainCalculatorScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp)) // 16dpから8dpに縮小
 
             when (selectedTab) {
                 0 -> BasicCalculatorTab(viewModel)
@@ -146,21 +146,21 @@ fun MainCalculatorScreen(
 fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp) // 0dpから4dpに間隔を少し開ける
     ) {
-        // 表示部分
+        // 表示部分（結果画面を少し大きく）
         CalculatorDisplay(
             displayText = formatNumberWithCommas(viewModel.displayText.value),
             expression = viewModel.displayExpression,
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
-            modifier = Modifier.weight(0.3f)
+            modifier = Modifier.weight(0.4f) // 0.35fから0.4fに増加（結果画面を大きく）
         )
 
-        // キーパッド
+        // キーパッド（画面を埋めるように調整）
         BasicKeypad(
             viewModel = viewModel,
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.6f) // 0.65fから0.6fに調整
         )
     }
 }

@@ -27,39 +27,34 @@ fun CalculatorButton(
     isSpecial: Boolean = false,
     isEquals: Boolean = false
 ) {
-    val buttonColor = when {
-        isEquals -> Color(0xFF6B46C1) // 紫色（=ボタン用）
-        isSpecial -> Color(0xFFA5A5A5) // 薄いグレー（C、()、%、⌫用）
-        isOperator -> Color(0xFFDC2626) // 赤色（演算子用）
-        else -> backgroundColor // グレー（数字用）
-    }
+    val buttonColor = Color(0xFF505050) // 全てのボタンを数字ボタンと同じグレー背景
     
     val contentColor = when {
-        isEquals -> Color.White
-        isSpecial -> Color.Black
-        isOperator -> Color.White
-        else -> textColor
+        isEquals -> Color(0xFFFF6B6B) // =ボタンは赤文字
+        isSpecial -> Color(0xFFFF6B6B) // C、()、%、⌫は赤文字
+        isOperator -> Color(0xFFFF6B6B) // 演算子は赤文字
+        else -> textColor // 数字ボタンは白文字
     }
 
     Button(
         onClick = onClick,
         modifier = modifier
-            .aspectRatio(1f)
-            .padding(4.dp),
+            .height(68.dp) // 55dpから68dpに増加してボタンを大きく
+            .padding(1.dp), // パディングは最小に
         colors = ButtonDefaults.buttonColors(
             containerColor = buttonColor,
             contentColor = contentColor
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(8.dp),
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
+            defaultElevation = 1.dp,
+            pressedElevation = 2.dp // 4dpから2dpに縮小
         )
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
+            fontSize = 32.sp, // 24spから32spに大幅増加
+            fontWeight = FontWeight.Bold, // Lightから携帯フォントらしいBoldに変更
             textAlign = TextAlign.Center
         )
     }
@@ -73,29 +68,28 @@ fun WideCalculatorButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    textColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    backgroundColor: Color = Color(0xFF505050), // 数字ボタンと同じ背景色
+    textColor: Color = Color(0xFFFF6B6B) // 赤文字（=ボタン用）
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .padding(4.dp),
+            .height(60.dp) // 64dpから60dpに変更
+            .padding(2.dp), // 4dpから2dpに縮小
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
             contentColor = textColor
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp), // 16dpから12dpに縮小
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
+            defaultElevation = 2.dp, // 4dpから2dpに縮小
+            pressedElevation = 4.dp // 8dpから4dpに縮小
         )
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium
+            fontSize = 32.sp, // 24spから32spに大幅増加
+            fontWeight = FontWeight.Bold // Lightから携帯フォントらしいBoldに変更
         )
     }
 }
