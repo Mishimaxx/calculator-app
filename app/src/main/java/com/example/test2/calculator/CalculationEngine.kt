@@ -81,7 +81,7 @@ class CalculationEngine {
             "ln" to ::ln,
             "log" to ::log,
             
-            // 平方根・立方根
+            // 平方根・立方根 - 記号形式も追加
             "cbrt" to ::cbrt,
             "sqrt" to ::sqrt,
             
@@ -95,6 +95,12 @@ class CalculationEngine {
         
         // 階乗の処理
         result = processFactorial(result)
+        
+        // 平方根・立方根記号の処理
+        result = processSquareRoot(result)
+        
+        // 順列・組み合わせの処理
+        result = processPermutationCombination(result)
         
         // べき乗の処理
         result = processPower(result)
@@ -126,6 +132,56 @@ class CalculationEngine {
             val number = match.groupValues[1].toInt()
             val factorialResult = factorial(number)
             result = result.replace(match.value, factorialResult.toString())
+        }
+        
+        return result
+    }
+    
+    private fun processSquareRoot(expression: String): String {
+        var result = expression
+        
+        // √ パターン: √ + 数字
+        val sqrtPattern = "√([\\d.]+)".toRegex()
+        while (sqrtPattern.containsMatchIn(result)) {
+            val match = sqrtPattern.find(result)!!
+            val number = match.groupValues[1].toDouble()
+            val sqrtResult = sqrt(number)
+            result = result.replace(match.value, sqrtResult.toString())
+        }
+        
+        // ³√ パターン: ³√ + 数字  
+        val cbrtPattern = "³√([\\d.]+)".toRegex()
+        while (cbrtPattern.containsMatchIn(result)) {
+            val match = cbrtPattern.find(result)!!
+            val number = match.groupValues[1].toDouble()
+            val cbrtResult = cbrt(number)
+            result = result.replace(match.value, cbrtResult.toString())
+        }
+        
+        return result
+    }
+
+    private fun processPermutationCombination(expression: String): String {
+        var result = expression
+        
+        // P パターン: 数字 + P + 数字
+        val nPrPattern = "(\\d+)P(\\d+)".toRegex()
+        while (nPrPattern.containsMatchIn(result)) {
+            val match = nPrPattern.find(result)!!
+            val n = match.groupValues[1].toInt()
+            val r = match.groupValues[2].toInt()
+            val permutationResult = permutation(n, r)
+            result = result.replace(match.value, permutationResult.toString())
+        }
+        
+        // C パターン: 数字 + C + 数字
+        val nCrPattern = "(\\d+)C(\\d+)".toRegex()
+        while (nCrPattern.containsMatchIn(result)) {
+            val match = nCrPattern.find(result)!!
+            val n = match.groupValues[1].toInt()
+            val r = match.groupValues[2].toInt()
+            val combinationResult = combination(n, r)
+            result = result.replace(match.value, combinationResult.toString())
         }
         
         return result
@@ -230,6 +286,39 @@ class CalculationEngine {
         var result = 1L
         for (i in 2..n) {
             result *= i
+        }
+        return result
+    }
+    
+    /**
+     * 順列計算 nPr = n!/(n-r)!
+     */
+    fun permutation(n: Int, r: Int): Long {
+        if (n < 0 || r < 0) throw IllegalArgumentException("n and r must be non-negative")
+        if (r > n) throw IllegalArgumentException("r cannot be greater than n")
+        if (n > 20) throw IllegalArgumentException("n too large")
+        
+        var result = 1L
+        for (i in (n - r + 1)..n) {
+            result *= i
+        }
+        return result
+    }
+    
+    /**
+     * 組み合わせ計算 nCr = n!/(r!(n-r)!)
+     */
+    fun combination(n: Int, r: Int): Long {
+        if (n < 0 || r < 0) throw IllegalArgumentException("n and r must be non-negative")
+        if (r > n) throw IllegalArgumentException("r cannot be greater than n")
+        if (n > 20) throw IllegalArgumentException("n too large")
+        
+        // r > n/2 の場合は r = n - r として計算量を削減
+        val actualR = if (r > n - r) n - r else r
+        
+        var result = 1L
+        for (i in 1..actualR) {
+            result = result * (n - i + 1) / i
         }
         return result
     }

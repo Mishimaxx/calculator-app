@@ -51,21 +51,74 @@ class CalculatorViewModel(
     // 指数入力プレースホルダーフラグ
     private var isExponentPlaceholderActive = false
     private val exponentPlaceholder = "□"
+    private val superscriptPlaceholder = "▫" // eの右上用の上付き四角
+    
+    /**
+     * 数字を上付き文字に変換
+     */
+    private fun convertToSuperscript(number: String): String {
+        val superscriptMap = mapOf(
+            '0' to '⁰', '1' to '¹', '2' to '²', '3' to '³', '4' to '⁴',
+            '5' to '⁵', '6' to '⁶', '7' to '⁷', '8' to '⁸', '9' to '⁹'
+        )
+        return number.map { char -> superscriptMap[char] ?: char }.joinToString("")
+    }
 
     /**
-     * 表示用に式を変換する（*→×、/→÷）
+     * 表示用に式を変換する（*→×、/→÷、^2→□²、^3→□³）
      */
     private fun formatExpressionForDisplay(expression: String): String {
-        return expression
+        var result = expression
             .replace("*", "×")
             .replace("/", "÷")
+        
+        // べき乗の変換（数字^2 → 数字²、数字^3 → 数字³）
+        result = result.replace(Regex("(\\d+)\\^2")) { matchResult ->
+            "${matchResult.groupValues[1]}²"
+        }
+        result = result.replace(Regex("(\\d+)\\^3")) { matchResult ->
+            "${matchResult.groupValues[1]}³"
+        }
+        result = result.replace(Regex("(\\d+)\\^-1")) { matchResult ->
+            "${matchResult.groupValues[1]}⁻¹"
+        }
+        result = result.replace(Regex("(\\d+)\\^-3")) { matchResult ->
+            "${matchResult.groupValues[1]}⁻³"
+        }
+        
+        // 未入力の場合は□を表示
+        result = result.replace("^2", "□²")
+        result = result.replace("^3", "□³")
+        result = result.replace("^-1", "□⁻¹")
+        result = result.replace("^-3", "□⁻³")
+        
+        // 指数の変換
+        result = result.replace(Regex("10\\^(\\d+)")) { matchResult ->
+            "10^${matchResult.groupValues[1]}"
+        }
+        result = result.replace(Regex("e\\^(\\d+)")) { matchResult ->
+            val exponent = matchResult.groupValues[1]
+            "e${convertToSuperscript(exponent)}"
+        }
+        result = result.replace("10^", "10^□")
+        result = result.replace("e^", "e▫")
+        
+        // 階乗の変換
+        result = result.replace(Regex("!(\\d+)")) { matchResult ->
+            "${matchResult.groupValues[1]}!"
+        }
+        // 未入力の場合のみ□を表示（数字の後でない!のみ）
+        result = result.replace(Regex("(?<!\\d)!(?!\\d)")) { "□!" }
+        
+        return result
     }
 
     /**
      * 数字を3桁区切りでフォーマットする
      */
     private fun formatNumberWithCommas(number: String): String {
-        if (number.isEmpty() || number == "Error" || number == "Division by Zero" || number == "Overflow Error") {
+        if (number.isEmpty() || number == "Error" || number == "Division by Zero" || number == "Overflow Error" || 
+            number == "数字から入力してください" || number == "Math Error") {
             return number
         }
         
@@ -92,12 +145,50 @@ class CalculatorViewModel(
      * 式全体をフォーマットする（演算子変換と数字の3桁区切り）
      */
     private fun formatCompleteExpression(expression: String): String {
-        val operatorConverted = expression
+        var result = expression
             .replace("*", "×")
             .replace("/", "÷")
         
+        // べき乗の変換（数字^2 → 数字²、数字^3 → 数字³）
+        result = result.replace(Regex("(\\d+)\\^2")) { matchResult ->
+            "${matchResult.groupValues[1]}²"
+        }
+        result = result.replace(Regex("(\\d+)\\^3")) { matchResult ->
+            "${matchResult.groupValues[1]}³"
+        }
+        result = result.replace(Regex("(\\d+)\\^-1")) { matchResult ->
+            "${matchResult.groupValues[1]}⁻¹"
+        }
+        result = result.replace(Regex("(\\d+)\\^-3")) { matchResult ->
+            "${matchResult.groupValues[1]}⁻³"
+        }
+        
+        // 未入力の場合は□を表示
+        result = result.replace("^2", "□²")
+        result = result.replace("^3", "□³")
+        result = result.replace("^-1", "□⁻¹")
+        result = result.replace("^-3", "□⁻³")
+        
+        // 指数の変換
+        result = result.replace(Regex("10\\^(\\d+)")) { matchResult ->
+            "10^${matchResult.groupValues[1]}"
+        }
+        result = result.replace(Regex("e\\^(\\d+)")) { matchResult ->
+            val exponent = matchResult.groupValues[1]
+            "e${convertToSuperscript(exponent)}"
+        }
+        result = result.replace("10^", "10^□")
+        result = result.replace("e^", "e▫")
+        
+        // 階乗の変換
+        result = result.replace(Regex("!(\\d+)")) { matchResult ->
+            "${matchResult.groupValues[1]}!"
+        }
+        // 未入力の場合のみ□を表示（数字の後でない!のみ）
+        result = result.replace(Regex("(?<!\\d)!(?!\\d)")) { "□!" }
+        
         // 数字部分のみを3桁区切りにフォーマット
-        return operatorConverted.replace(Regex("\\d+(?:\\.\\d+)?")) { matchResult ->
+        return result.replace(Regex("\\d+(?:\\.\\d+)?")) { matchResult ->
             formatNumberWithCommas(matchResult.value)
         }
     }
@@ -112,7 +203,31 @@ class CalculatorViewModel(
      * 表示用のプレビュー結果を取得
      */
     val formattedPreviewResult: String
-        get() = formatNumberWithCommas(_previewResult.value)
+        get() {
+            val result = _previewResult.value
+            // プレビュー結果が純粋な数値かどうかをチェック
+            return if (result.matches(Regex("^-?\\d+(\\.\\d+)?$"))) {
+                // 純粋な数値の場合のみ3桁区切りを適用
+                formatNumberWithCommas(result)
+            } else {
+                // 数値以外（関数名やエラーメッセージなど）の場合はそのまま返す
+                result
+            }
+        }
+
+    /**
+     * 表示用の計算結果を取得（エラーメッセージは3桁区切りしない）
+     */
+    val formattedDisplayText: String
+        get() {
+            val value = _displayText.value
+            // 数値（オプションで符号と小数点）だけの場合に 3 桁区切りを適用し、それ以外はそのまま返す
+            return if (value.matches(Regex("^-?\\d+(?:\\.\\d+)?$"))) {
+                formatNumberWithCommas(value)
+            } else {
+                value
+            }
+        }
 
     /**
      * 式のプレビュー結果を更新する
@@ -121,12 +236,63 @@ class CalculatorViewModel(
         val expr = _expression.value
         
         if (expr.isNotEmpty() && !_isResultShowing.value) {
-            try {            // 演算子を含む完全な式の場合（例：「33+22」）
-            if ((expr.contains('+') || expr.contains('-') || expr.contains('*') ||
-                 expr.contains('/') || expr.contains('%')) &&
+            try {
+            // e^x形式やべき乗の中間結果をチェック（例：e^2、10^3など）
+            val powerPattern = Regex("(e|10)\\^([\\d.]+)\$")
+            val powerMatch = powerPattern.find(expr)
+            
+            if (powerMatch != null) {
+                try {
+                    val result = calculationEngine.evaluate(expr)
+                    if (!result.contains("Error") && result != "Division by Zero" &&
+                        result != "Overflow Error" && result != "Math Error") {
+                        _previewResult.value = result
+                    } else {
+                        _previewResult.value = ""
+                    }
+                } catch (e: Exception) {
+                    _previewResult.value = ""
+                }
+            }
+            // 関数呼び出しの中間結果をチェック（例：sin(30）、log(100）など）
+            else if (expr.matches(Regex("(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|ln|log|sqrt|cbrt)\\(([\\d.]+)\\)?\$"))) {
+                val functionPattern = Regex("(sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|ln|log|sqrt|cbrt)\\(([\\d.]+)\\)?\$")
+                val functionMatch = functionPattern.find(expr)
+                
+                if (functionMatch != null) {
+                    val funcName = functionMatch.groupValues[1]
+                    val argStr = functionMatch.groupValues[2]
+                    if (argStr.isNotEmpty()) {
+                        try {
+                            // 関数に引数がある場合、中間結果を計算
+                            val tempExpr = if (expr.endsWith(")")) {
+                                expr // 既に閉じ括弧がある場合はそのまま
+                            } else {
+                                expr + ")" // 閉じ括弧を追加
+                            }
+                            val result = calculationEngine.evaluate(tempExpr)
+                            if (!result.contains("Error") && result != "Division by Zero" &&
+                                result != "Overflow Error" && result != "Math Error") {
+                                _previewResult.value = result
+                            } else {
+                                _previewResult.value = ""
+                            }
+                        } catch (e: Exception) {
+                            _previewResult.value = ""
+                        }
+                    } else {
+                        _previewResult.value = ""
+                    }
+                }
+            }
+            // 演算子を含む完全な式の場合（例：「33+22」、「9P6」、「10C4」、「√9」）
+            else if ((expr.contains('+') || expr.contains('-') || expr.contains('*') ||
+                 expr.contains('/') || expr.contains('%') || expr.contains('P') || expr.contains('C') ||
+                 (expr.contains('√') && !expr.contains('□'))) &&
                 !expr.trim().endsWith('+') && !expr.trim().endsWith('-') &&
                 !expr.trim().endsWith('*') && !expr.trim().endsWith('/') &&
-                !expr.trim().endsWith('%')) {
+                !expr.trim().endsWith('%') && !expr.trim().endsWith('P') && !expr.trim().endsWith('C') &&
+                !expr.trim().endsWith('√') && !expr.trim().endsWith(' ')) {
                 val result = calculationEngine.evaluate(expr)
                 if (!result.contains("Error") && result != "Division by Zero" &&
                     result != "Overflow Error" && result != "Math Error") {
@@ -135,52 +301,65 @@ class CalculatorViewModel(
                     _previewResult.value = "" // 3÷0などのエラー時は何も表示しない
                 }
             }
-                // 演算子で終わっている場合（例：「33+」）は演算子の前の数値を表示
-                else if (expr.trim().endsWith('+') || expr.trim().endsWith('-') || 
-                         expr.trim().endsWith('*') || expr.trim().endsWith('/') || 
-                         expr.trim().endsWith('%')) {
-                    // 演算子の前の数値を取得
-                    val trimmedExpr = expr.trim()
-                    val lastOperatorIndex = maxOf(
-                        trimmedExpr.lastIndexOf('+'),
-                        trimmedExpr.lastIndexOf('-'),
-                        trimmedExpr.lastIndexOf('*'),
-                        trimmedExpr.lastIndexOf('/'),
-                        trimmedExpr.lastIndexOf('%')
-                    )
-                    
-                    if (lastOperatorIndex > 0) {
-                        // 演算子より前の部分を評価
-                        val beforeOperator = trimmedExpr.substring(0, lastOperatorIndex).trim()
-                        if (beforeOperator.isNotEmpty()) {
-                            try {
-                                val result = calculationEngine.evaluate(beforeOperator)
-                                if (!result.contains("Error") && result != "Division by Zero" && 
-                                    result != "Overflow Error") {
-                                    _previewResult.value = result
-                                } else {
-                                    _previewResult.value = beforeOperator
-                                }
-                            } catch (e: Exception) {
+            // 演算子で終わっている場合（例：「33+」、「9P」、「10C」、「√□」）は演算子の前の数値を表示
+            else if (expr.trim().endsWith('+') || expr.trim().endsWith('-') || 
+                     expr.trim().endsWith('*') || expr.trim().endsWith('/') || 
+                     expr.trim().endsWith('%') || expr.trim().endsWith('P') || expr.trim().endsWith('C') ||
+                     expr.trim().endsWith("√□") || expr.trim().endsWith("³√□") || expr.trim().endsWith(' ')) {
+                // 演算子の前の数値を取得
+                val trimmedExpr = expr.trim()
+                val lastOperatorIndex = maxOf(
+                    trimmedExpr.lastIndexOf('+'),
+                    trimmedExpr.lastIndexOf('-'),
+                    trimmedExpr.lastIndexOf('*'),
+                    trimmedExpr.lastIndexOf('/'),
+                    trimmedExpr.lastIndexOf('%'),
+                    trimmedExpr.lastIndexOf('P'),
+                    trimmedExpr.lastIndexOf('C'),
+                    if (trimmedExpr.endsWith("√□")) trimmedExpr.lastIndexOf("√□") else -1,
+                    if (trimmedExpr.endsWith("³√□")) trimmedExpr.lastIndexOf("³√□") else -1
+                )
+                
+                if (lastOperatorIndex > 0) {
+                    // 演算子より前の部分を評価
+                    val beforeOperator = trimmedExpr.substring(0, lastOperatorIndex).trim()
+                    if (beforeOperator.isNotEmpty()) {
+                        try {
+                            val result = calculationEngine.evaluate(beforeOperator)
+                            if (!result.contains("Error") && result != "Division by Zero" && 
+                                result != "Overflow Error") {
+                                _previewResult.value = result
+                            } else {
                                 _previewResult.value = beforeOperator
                             }
-                        } else {
-                            _previewResult.value = ""
+                        } catch (e: Exception) {
+                            _previewResult.value = beforeOperator
                         }
                     } else {
-                        // 最初の演算子の場合（例：「33+」で33を表示）
-                        val numberPart = trimmedExpr.dropLast(1).trim()
-                        if (numberPart.isNotEmpty()) {
-                            _previewResult.value = numberPart
-                        } else {
-                            _previewResult.value = ""
-                        }
+                        _previewResult.value = ""
+                    }
+                } else {
+                    // 最初の演算子の場合（例：「33+」で33を表示）
+                    val numberPart = if (trimmedExpr.endsWith(' ')) {
+                        trimmedExpr.trim()
+                    } else {
+                        trimmedExpr.dropLast(1).trim()
+                    }
+                    if (numberPart.isNotEmpty()) {
+                        _previewResult.value = numberPart
+                    } else {
+                        _previewResult.value = ""
                     }
                 }
-                // 数字のみの場合は表示しない
-                else {
+            }
+            // 数字のみの場合は現在の数字を表示
+            else {
+                if (expr.isNotEmpty() && expr.matches(Regex("\\d+(\\.\\d+)?"))) {
+                    _previewResult.value = expr
+                } else {
                     _previewResult.value = ""
                 }
+            }
             } catch (e: Exception) {
                 _previewResult.value = ""
             }
@@ -193,11 +372,45 @@ class CalculatorViewModel(
      * 数字ボタンが押された時の処理
      */
     fun onNumberClicked(number: String) {
-        if (isExponentPlaceholderActive && _displayText.value.endsWith(exponentPlaceholder)) {
-            // プレースホルダーを数字で置き換える
-            _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length) + number
+        // べき乗（^2, ^3, ^-1, ^-3）や階乗(!)を先に入力してしまった場合の補正
+        // 例: "^3" の後に数字を入力したら "9³" のように基数が前に来るようにする
+        if (_expression.value.startsWith("^2") || _expression.value.startsWith("^3") || _expression.value.startsWith("^-1") || _expression.value.startsWith("^-3")) {
+            // まだ基数が入力されていない状態なので、入力された数字を先頭に挿入する
+            _expression.value = number + _expression.value
+            _displayText.value = number + _displayText.value
+            // プレビュー結果を更新
+            updatePreviewResult()
+            return
+        }
+        // 階乗の場合の特別処理
+        if (_expression.value.endsWith("!")) {
+            // 階乗は後置演算子なので、数字を前に挿入する
+            _expression.value = _expression.value.dropLast(1) // !を削除
+            _expression.value = number + _expression.value + "!" // 数字 + ! の順序で再構築
+            _displayText.value = number + "!"
+            // プレビュー結果を更新
+            updatePreviewResult()
+            return
+        }
+        // □または▫が含まれている場合は最初のものを数字に置換
+        if (_displayText.value.contains("□")) {
+            _displayText.value = _displayText.value.replaceFirst("□", number)
+            _expression.value = _expression.value.replaceFirst("□", number)
+            // 指数プレースホルダーがアクティブな場合は無効化
+            if (isExponentPlaceholderActive) {
+                isExponentPlaceholderActive = false
+            }
+            // プレビュー結果を更新
+            updatePreviewResult()
+            return
+        } else if (_displayText.value.contains("▫")) {
+            _displayText.value = _displayText.value.replaceFirst("▫", number)
+            // e^の場合は式にも数字を追加（e^3のようになる）
             _expression.value += number
-            isExponentPlaceholderActive = false
+            // 指数プレースホルダーがアクティブな場合は無効化
+            if (isExponentPlaceholderActive) {
+                isExponentPlaceholderActive = false
+            }
             // プレビュー結果を更新
             updatePreviewResult()
             return
@@ -240,19 +453,62 @@ class CalculatorViewModel(
             // プレースホルダーが残っている場合は削除
             if (_displayText.value.endsWith(exponentPlaceholder)) {
                 _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length)
+            } else if (_displayText.value.endsWith(superscriptPlaceholder)) {
+                _displayText.value = _displayText.value.dropLast(superscriptPlaceholder.length)
             }
             isExponentPlaceholderActive = false
         }
+        
+        // nPr と nCr の場合は特別な処理
+        if (operator == "nPr" || operator == "nCr") {
+            // 数字が入力されているかチェック
+            if (_displayText.value.isEmpty() || _displayText.value == "0" || 
+                _displayText.value.toDoubleOrNull() == null) {
+                _displayText.value = "数字から入力してください"
+                _expression.value = ""
+                _isResultShowing.value = true
+                _shouldResetOnNextInput.value = false
+                return
+            }
+        }
+        
+        val displayOperator = when (operator) {
+            "nPr" -> "P"
+            "nCr" -> "C"
+            else -> operator
+        }
+        
+        val expressionOperator = when (operator) {
+            "nPr" -> "P"
+            "nCr" -> "C"
+            else -> operator
+        }
+        
         if (_isResultShowing.value) {
             // 計算結果が表示されている場合、その結果を使って新しい式を開始
-            _expression.value = _displayText.value + " $operator "
+            if (operator == "nPr" || operator == "nCr") {
+                _expression.value = _displayText.value + expressionOperator
+                _displayText.value = _displayText.value + displayOperator
+            } else {
+                _expression.value = _displayText.value + " $expressionOperator "
+            }
             _isResultShowing.value = false
         } else {
             // 現在入力中の数値がある場合、それを式に追加
             if (_displayText.value.isNotEmpty() && _displayText.value != "0" && _expression.value.isEmpty()) {
-                _expression.value = _displayText.value + " $operator "
+                if (operator == "nPr" || operator == "nCr") {
+                    _expression.value = _displayText.value + expressionOperator
+                    _displayText.value = _displayText.value + displayOperator
+                } else {
+                    _expression.value = _displayText.value + " $expressionOperator "
+                }
             } else {
-                _expression.value += " $operator "
+                if (operator == "nPr" || operator == "nCr") {
+                    _expression.value += expressionOperator
+                    _displayText.value += displayOperator
+                } else {
+                    _expression.value += " $expressionOperator "
+                }
             }
         }
         // 演算子を押した後は新しい数値の入力を待つ状態にする
@@ -268,6 +524,8 @@ class CalculatorViewModel(
         if (isExponentPlaceholderActive) {
             if (_displayText.value.endsWith(exponentPlaceholder)) {
                 _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length)
+            } else if (_displayText.value.endsWith(superscriptPlaceholder)) {
+                _displayText.value = _displayText.value.dropLast(superscriptPlaceholder.length)
             }
             isExponentPlaceholderActive = false
         }
@@ -315,9 +573,16 @@ class CalculatorViewModel(
         if (_isResultShowing.value) {
             onClearClicked()
         } else {
-            if (_displayText.value.length > 1) {
-                _displayText.value = _displayText.value.dropLast(1)
-                _expression.value = _expression.value.dropLast(1)
+            val currentExpression = _expression.value
+            val currentDisplay = _displayText.value
+            
+            if (currentExpression.isNotEmpty()) {
+                // 複数文字のオペレーターや関数を適切に削除
+                val newExpression = deleteLastToken(currentExpression)
+                val newDisplay = deleteLastToken(currentDisplay)
+                
+                _expression.value = newExpression
+                _displayText.value = newDisplay
             } else {
                 _displayText.value = ""
                 _expression.value = ""
@@ -326,14 +591,55 @@ class CalculatorViewModel(
         // プレビュー結果を更新
         updatePreviewResult()
     }
+    
+    /**
+     * 最後のトークンを適切に削除する
+     */
+    private fun deleteLastToken(text: String): String {
+        if (text.isEmpty()) return ""
+        
+        // 空白付きのオペレーターを識別して削除（例: " + ", " - ", " × ", " ÷ "）
+        val spaceOperatorPatterns = listOf(
+            " + ", " - ", " × ", " ÷ ", " * ", " / ", " % ", " ^ "
+        )
+        
+        for (pattern in spaceOperatorPatterns) {
+            if (text.endsWith(pattern)) {
+                return text.dropLast(pattern.length)
+            }
+        }
+        
+        // 複数文字のオペレーターや関数を識別して削除
+        val multiCharPatterns = listOf(
+            "√□", "³√□", "10^", "e^", "sin(", "cos(", "tan(", "log(", "ln(", "π", "e"
+        )
+        
+        for (pattern in multiCharPatterns) {
+            if (text.endsWith(pattern)) {
+                return text.dropLast(pattern.length)
+            }
+        }
+        
+        // プレースホルダーを削除
+        if (text.endsWith("□")) {
+            return text.dropLast(1)
+        }
+        
+        // 通常の文字を削除
+        return text.dropLast(1)
+    }
 
     /**
      * 小数点ボタンが押された時の処理
      */
     fun onDecimalClicked() {
-        if (isExponentPlaceholderActive && _displayText.value.endsWith(exponentPlaceholder)) {
+        if (isExponentPlaceholderActive && (_displayText.value.endsWith(exponentPlaceholder) || _displayText.value.endsWith(superscriptPlaceholder))) {
             // プレースホルダーを小数点で置換
-            _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length) + "0."
+            if (_displayText.value.endsWith(exponentPlaceholder)) {
+                _displayText.value = _displayText.value.dropLast(exponentPlaceholder.length) + "0."
+            } else {
+                _displayText.value = _displayText.value.dropLast(superscriptPlaceholder.length) + "0."
+            }
             _expression.value += "0."
             isExponentPlaceholderActive = false
             updatePreviewResult()
@@ -413,29 +719,29 @@ class CalculatorViewModel(
             "e^x" -> {
                 // ネイピア数のべき乗：プレースホルダーを用意
                 _expression.value += "e^"
-                _displayText.value += "e^$exponentPlaceholder"
+                _displayText.value += "e$superscriptPlaceholder"
                 isExponentPlaceholderActive = true
                 _shouldResetOnNextInput.value = false
             }
             "exp" -> {
                 // e^x と同等機能
                 _expression.value += "e^"
-                _displayText.value += "e^$exponentPlaceholder"
+                _displayText.value += "e$superscriptPlaceholder"
                 isExponentPlaceholderActive = true
                 _shouldResetOnNextInput.value = false
             }
             "sqrt", "cbrt" -> {
                 // 平方根・立方根
                 if (function == "sqrt") {
-                    _expression.value += "sqrt("
-                    _displayText.value += "√("
+                    _expression.value += "√□"
+                    _displayText.value += "√□"
                 } else {
-                    _expression.value += "cbrt("
-                    _displayText.value += "³√("
+                    _expression.value += "³√□"
+                    _displayText.value += "³√□"
                 }
                 _shouldResetOnNextInput.value = false
             }
-            "^", "^2", "^3" -> {
+            "^", "^2", "^3", "^-3" -> {
                 // べき乗
                 if (function == "^2") {
                     _expression.value += "^2"
@@ -443,6 +749,9 @@ class CalculatorViewModel(
                 } else if (function == "^3") {
                     _expression.value += "^3"
                     _displayText.value += "³"
+                } else if (function == "^-3") {
+                    _expression.value += "^-3"
+                    _displayText.value += "⁻³"
                 } else {
                     // 一般べき乗：プレースホルダーを表示
                     _expression.value += "^"
@@ -453,8 +762,15 @@ class CalculatorViewModel(
             }
             "!" -> {
                 // 階乗
-                _expression.value += "!"
-                _displayText.value += "!"
+                if (_displayText.value.isEmpty() || _displayText.value.last().isDigit().not()) {
+                    // 数字がまだ入力されていない場合は、べき乗と同じように処理
+                    _expression.value += "!"
+                    _displayText.value += "!"
+                } else {
+                    // 数字の後に階乗を追加
+                    _expression.value += "!"
+                    _displayText.value += "!"
+                }
                 _shouldResetOnNextInput.value = false
             }
             "+/-" -> {
@@ -503,12 +819,6 @@ class CalculatorViewModel(
                 // 微分（暫定的に実装）
                 _expression.value += "d/dx("
                 _displayText.value += "d/dx("
-                _shouldResetOnNextInput.value = false
-            }
-            "nPr", "nCr" -> {
-                // 順列・組み合わせ（暫定的に実装）
-                _expression.value += "$function("
-                _displayText.value += "$function("
                 _shouldResetOnNextInput.value = false
             }
             "EXP" -> {
@@ -593,8 +903,8 @@ class CalculatorViewModel(
             }
             "1/x" -> {
                 // 逆数
-                _expression.value += "1/("
-                _displayText.value += "1/("
+                _expression.value += "^-1"
+                _displayText.value += "⁻¹"
                 _shouldResetOnNextInput.value = false
             }
             "yroot" -> {
@@ -641,16 +951,29 @@ class CalculatorViewModel(
      * 履歴をすべてクリア
      */
     fun clearAllHistory() {
-        // 履歴機能（暫定的に実装）
-        // 現状では何もしない
+        viewModelScope.launch {
+            try {
+                repository.deleteAllEntries()
+                // 削除後にデータベースが更新されるまで少し待つ
+                kotlinx.coroutines.delay(100)
+            } catch (e: Exception) {
+                // エラーログの出力
+                e.printStackTrace()
+            }
+        }
     }
 
     /**
      * 履歴エントリを削除
      */
     fun deleteHistoryEntry(id: Long) {
-        // 履歴機能（暫定的に実装）
-        // 現状では何もしない
+        viewModelScope.launch {
+            // IDからエントリを取得して削除
+            // Note: Room doesn't have a direct delete by ID method in the current DAO,
+            // so we need to add that functionality or use a different approach
+            // For now, we'll add a delete by ID method to the repository
+            repository.deleteEntryById(id)
+        }
     }
 
     /**

@@ -31,6 +31,9 @@ interface CalculationDao {
     @Query("DELETE FROM calculation_entries")
     suspend fun deleteAllEntries()
 
+    @Query("DELETE FROM calculation_entries WHERE id = :id")
+    suspend fun deleteEntryById(id: Long)
+
     @Query("SELECT COUNT(*) FROM calculation_entries")
     suspend fun getEntryCount(): Int
 }

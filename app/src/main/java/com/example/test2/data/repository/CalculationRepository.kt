@@ -30,5 +30,9 @@ class CalculationRepository(private val calculationDao: CalculationDao) {
         calculationDao.deleteAllEntries()
     }
 
+    suspend fun deleteEntryById(id: Long) {
+        calculationDao.deleteEntryById(id)
+    }
+
     suspend fun getEntryCount(): Int = calculationDao.getEntryCount()
 }

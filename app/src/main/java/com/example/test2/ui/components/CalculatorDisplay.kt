@@ -20,7 +20,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * 電卓の表示画面コンポーネント
+ * 電卓の表示画面コンポーネント（CASIO風液晶ディスプレイ）
  */
 @Composable
 fun CalculatorDisplay(
@@ -56,58 +56,68 @@ fun CalculatorDisplay(
             .replace("÷", "÷")
     }
 
-    Card(
+    // ダークなグレーの背景
+    val displayBackground = Color(0xFF404040) // ダークなグレーの背景
+    val textColor = Color.White // 白い文字色
+    val resultColor = Color(0xFFFF6B6B) // ボタンと同じ赤色
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(0.dp), // 全てのパディングを削除して横端まで広げる
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), // 影を削除
-        shape = RoundedCornerShape(0.dp), // 角を完全に四角に
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2C2C2E)) // ダークグレー背景
+            .background(displayBackground)
+            .padding(16.dp)
     ) {
+        // メインディスプレイエリア - 下の方に配置
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 16.dp), // パディングを縮小
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.Bottom // 下揃えに変更
+            verticalArrangement = Arrangement.Bottom
         ) {
-            // 上側は空白スペース（画面を広く使う）
+            // 上側は空白スペース
             Spacer(modifier = Modifier.weight(1f))
 
-            // 式表示部分（一番下に配置）
+            // 式表示部分
             if (expression.isNotEmpty()) {
                 val formattedExpression = formatExpressionSpacing(expression)
-                val expressionFontSize = calculateFontSize(formattedExpression, if (isResultShowing) 22f else 30f, 30) // より大きく
+                // 式入力時は式を大きく強調、結果表示時は小さく
+                val expressionFontSize = calculateFontSize(formattedExpression, if (isResultShowing) 18f else 32f, 30)
                 Text(
                     text = formattedExpression,
                     fontSize = expressionFontSize.sp,
-                    color = if (isResultShowing) Color(0xFF808080) else Color.White, // =押す前は白で強調、押した後は薄いグレー
+                    color = textColor,
                     textAlign = TextAlign.End,
-                    maxLines = 2, // 最大2行に制限して答えが消えないように
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     fontFamily = FontFamily.Monospace,
-                    fontWeight = if (isResultShowing) FontWeight.Normal else FontWeight.Bold, // =押す前は太字で強調
+                    // 式入力時は太字で強調
+                    fontWeight = if (isResultShowing) FontWeight.Normal else FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
-                    lineHeight = (expressionFontSize * 0.9f).sp // 行間をさらに狭く
+                    lineHeight = (expressionFontSize * 0.9f).sp
                 )
             }
 
-            // プレビュー結果表示（途中の答えまたは最終結果）
+            // 結果表示
             if (previewResult.isNotEmpty() || isResultShowing || displayText.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp)) // 間隔を少し広げる
+                Spacer(modifier = Modifier.height(8.dp))
                 val resultText = if (isResultShowing) displayText else if (previewResult.isNotEmpty()) previewResult else displayText
-                val resultFontSize = calculateFontSize(resultText, if (isResultShowing) 36f else 26f, 20) // より大きく
+                // = 押したら結果を大きく、式入力時は小さく
+                val resultFontSize = calculateFontSize(resultText, if (isResultShowing) 40f else 20f, 20)
+                
                 Text(
-                    text = if (!isResultShowing && previewResult.isNotEmpty()) "=$resultText" else resultText, // スペースを削除してより密接に
+                    text = if (!isResultShowing && previewResult.isNotEmpty()) "= $resultText" else resultText,
                     fontSize = resultFontSize.sp,
-                    color = if (isResultShowing) Color(0xFFFF6B6B) else Color(0xFFA0A0A0), // =押した後は赤色、途中はグレー
+                    // = 押したら赤文字で強調
+                    color = if (isResultShowing) resultColor else textColor,
                     textAlign = TextAlign.End,
-                    maxLines = 2, // 最大2行まで表示
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     fontFamily = FontFamily.Monospace,
-                    fontWeight = if (isResultShowing) FontWeight.Bold else FontWeight.Normal, // =押した後は太字で強調
+                    // = 押したら太字で強調
+                    fontWeight = if (isResultShowing) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier.fillMaxWidth(),
-                    lineHeight = (resultFontSize * 0.9f).sp // 行間をさらに狭く
+                    lineHeight = (resultFontSize * 0.9f).sp
                 )
             }
         }
@@ -119,10 +129,10 @@ fun CalculatorDisplay(
 fun CalculatorDisplayPreview() {
     MaterialTheme {
         CalculatorDisplay(
-            displayText = "99",
-            expression = "99+99",
-            previewResult = "198",
-            isResultShowing = false
+            displayText = "1",
+            expression = "sin(π/2)+cos(π/2)",
+            previewResult = "",
+            isResultShowing = true
         )
     }
 }

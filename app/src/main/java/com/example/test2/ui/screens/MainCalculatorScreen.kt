@@ -208,7 +208,7 @@ fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
     ) {
         // 表示部分（結果画面を少し大きく）
         CalculatorDisplay(
-            displayText = formatNumberWithCommas(viewModel.displayText.value),
+            displayText = viewModel.displayText.value,
             expression = viewModel.displayExpression,
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
@@ -231,7 +231,7 @@ fun ScientificCalculatorTab(viewModel: CalculatorViewModel) {
     ) {
         // 表示部分（関数電卓用）- より小さく
         CalculatorDisplay(
-            displayText = formatNumberWithCommas(viewModel.displayText.value),
+            displayText = viewModel.displayText.value,
             expression = viewModel.displayExpression,
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
