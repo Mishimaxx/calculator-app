@@ -111,15 +111,18 @@ fun ScientificKeypad(
                         height = 60.dp
                     )
                     
+                    // 一般べき乗 x^y
                     CalculatorButton(
-                        text = "x^y",
+                        text = "xʸ",
                         onClick = { viewModel.onScientificFunctionClicked("^") },
-                        modifier = Modifier.width(75.dp),
+                        modifier = Modifier.width(65.dp),
                         backgroundColor = darkGray,
                         textColor = redAccent,
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         height = 60.dp
                     )
+
+                    
                 }
                 
                 // 2行目: 対数・指数関数
@@ -196,15 +199,7 @@ fun ScientificKeypad(
                         height = 60.dp
                     )
                     
-                    CalculatorButton(
-                        text = "Abs",
-                        onClick = { viewModel.onScientificFunctionClicked("abs") },
-                        modifier = Modifier.width(65.dp),
-                        backgroundColor = darkGray,
-                        textColor = redAccent,
-                        fontSize = 17.sp,
-                        height = 60.dp
-                    )
+                    
                 }
                 
                 // 3行目: 三角関数
@@ -285,15 +280,7 @@ fun ScientificKeypad(
                         height = 60.dp
                     )
                     
-                    CalculatorButton(
-                        text = "hyp",
-                        onClick = { isHypMode = !isHypMode },
-                        modifier = Modifier.width(65.dp),
-                        backgroundColor = if (isHypMode) yellowAccent else darkGray,
-                        textColor = if (isHypMode) Color.Black else redAccent,
-                        fontSize = 17.sp,
-                        height = 60.dp
-                    )
+                    
                 }
                 
                 // 4行目: 双曲線関数・メモリ・その他
@@ -350,36 +337,6 @@ fun ScientificKeypad(
                         height = 60.dp
                     )
                     
-                    CalculatorButton(
-                        text = "Rnd",
-                        onClick = { viewModel.onScientificFunctionClicked("random") },
-                        modifier = Modifier.width(65.dp),
-                        backgroundColor = darkGray,
-                        textColor = redAccent,
-                        fontSize = 17.sp,
-                        height = 60.dp
-                    )
-                    
-                    
-                    CalculatorButton(
-                        text = "M+",
-                        onClick = { viewModel.onScientificFunctionClicked("M+") },
-                        modifier = Modifier.width(60.dp),
-                        backgroundColor = darkGray,
-                        textColor = redAccent,
-                        fontSize = 17.sp,
-                        height = 60.dp
-                    )
-                    
-                    CalculatorButton(
-                        text = "M-",
-                        onClick = { viewModel.onScientificFunctionClicked("M-") },
-                        modifier = Modifier.width(60.dp),
-                        backgroundColor = darkGray,
-                        textColor = redAccent,
-                        fontSize = 17.sp,
-                        height = 60.dp
-                    )
                     
                 }
             }

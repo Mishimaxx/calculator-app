@@ -1,6 +1,7 @@
 package com.example.test2.calculator
 
 import kotlin.math.*
+import java.math.BigDecimal
 
 /**
  * 計算エンジン - 式の評価と各種計算機能を提供
@@ -21,7 +22,10 @@ class CalculationEngine {
      */
     fun evaluate(expression: String): String {
         return try {
+            if (expression.isBlank()) return "Error"
             var processedExpression = expression.replace(" ", "")
+            // 上付き数字やプレースホルダーが混入しても評価できるよう正規化
+            processedExpression = normalizeSuperscripts(processedExpression)
             
             // 科学記法（E表記）を処理
             processedExpression = processedExpression.replace("E", "*10^")
@@ -31,10 +35,8 @@ class CalculationEngine {
             
             val result = evaluateExpression(processedExpression)
             
-            // 結果が非常に大きい場合（10^10以上）のチェック
-            if (abs(result) >= 1e10) {
-                "Overflow Error"
-            } else if (result.isNaN() || result.isInfinite()) {
+            // NaN/∞のみエラー扱い（サイズ制限は撤廃）
+            if (result.isNaN() || result.isInfinite()) {
                 "Math Error"
             } else {
                 formatResult(result)
@@ -42,8 +44,75 @@ class CalculationEngine {
         } catch (e: ArithmeticException) {
             "Division by Zero"
         } catch (e: Exception) {
-            "Error"
+            // デバッグ用：具体的なエラーを出力
+            "Error: ${e.message}"
         }
+    }
+
+    /**
+     * 科学表記(E表記)を避け、プレーンな10進数文字列に整形する。
+     * また末尾の不要な小数点ゼロは除去する。
+     */
+    private fun toPlainNumberString(value: Double): String {
+        // Double.toString() は丸め誤差を含まない10進文字列を返すので、それをBigDecimal化してplainにする
+        val bd = try {
+            BigDecimal(value.toString())
+        } catch (_: Exception) {
+            // フォールバック
+            BigDecimal.valueOf(value)
+        }
+        val plain = bd.stripTrailingZeros().toPlainString()
+        return if (plain == "-0") "0" else plain
+    }
+
+    /**
+     * 表示用の上付き指数（例: 9⁹, 10¹², e¹²）をエンジン用の表記 (9^9, 10^12, e^12) に正規化。
+     * また、上付きプレースホルダー（▫）は除去する。
+     */
+    private fun normalizeSuperscripts(expr: String): String {
+        if (expr.isEmpty()) return expr
+
+        // 先にプレースホルダーを除去
+        var res = expr.replace("▫", "")
+
+        // パターン: <base>(π/e/数字/閉じ括弧) + (上付きの符号付き整数) を <base>^<整数> に正規化
+        // 例: 10¹² -> 10^12, e⁻³ -> e^-3, (2+3)² -> (2+3)^2
+        val supDigits = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+        val supToNormal = mapOf(
+            '⁰' to '0','¹' to '1','²' to '2','³' to '3','⁴' to '4',
+            '⁵' to '5','⁶' to '6','⁷' to '7','⁸' to '8','⁹' to '9'
+        )
+    val pattern = Regex("([0-9)πe]+)([⁻]?[$supDigits]+)")
+        res = res.replace(pattern) { m ->
+            val base = m.groupValues[1]
+            val sup = m.groupValues[2]
+            // 直後が√のケース（³√など）は除外されるように、ここではマッチしない構造だが念のためチェック
+            if (sup == "³" && res.indexOf(m.value) + m.value.length < res.length && res[res.indexOf(m.value) + m.value.length] == '√') {
+                m.value // そのまま
+            } else {
+                val normal = buildString {
+                    for (ch in sup) {
+                        append(
+                            when (ch) {
+                                '⁻' -> '-'
+                                else -> supToNormal[ch] ?: ch
+                            }
+                        )
+                    }
+                }
+                "$base^$normal"
+            }
+        }
+
+        // 孤立した上付き（基数無し）については安全のため通常数字へ（³√は維持）
+        res = res.replace(Regex("(?!³√)[²³]")) { mr ->
+            if (mr.value == "²") "^2" else if (mr.value == "³") "^3" else mr.value
+        }
+        res = res.replace("⁻¹", "^-1").replace("⁻³", "^-3")
+        res = res.replace('⁰', '0').replace('¹', '1').replace('⁴', '4')
+            .replace('⁵', '5').replace('⁶', '6').replace('⁷', '7').replace('⁸', '8').replace('⁹', '9')
+
+        return res
     }
     
     /**
@@ -117,7 +186,7 @@ class CalculationEngine {
             val argument = match.groupValues[1]
             val argValue = evaluateExpression(argument)
             val funcResult = func(argValue)
-            result = result.replace(match.value, funcResult.toString())
+            result = result.replace(match.value, toPlainNumberString(funcResult))
         }
         
         return result
@@ -146,7 +215,7 @@ class CalculationEngine {
             val match = sqrtPattern.find(result)!!
             val number = match.groupValues[1].toDouble()
             val sqrtResult = sqrt(number)
-            result = result.replace(match.value, sqrtResult.toString())
+            result = result.replace(match.value, toPlainNumberString(sqrtResult))
         }
         
         // ³√ パターン: ³√ + 数字  
@@ -155,7 +224,7 @@ class CalculationEngine {
             val match = cbrtPattern.find(result)!!
             val number = match.groupValues[1].toDouble()
             val cbrtResult = cbrt(number)
-            result = result.replace(match.value, cbrtResult.toString())
+            result = result.replace(match.value, toPlainNumberString(cbrtResult))
         }
         
         return result
@@ -190,62 +259,17 @@ class CalculationEngine {
     private fun processPower(expression: String): String {
         var result = expression
         
-        // ^2, ^3などの特殊なべき乗
-        result = result.replace("^2", "^(2)")
-        result = result.replace("^3", "^(3)")
+        // べき乗を簡単に処理
+    // 負の指数にも対応
+    val powerPattern = Regex("([0-9]+(?:\\.[0-9]+)?)\\^(-?[0-9]+(?:\\.[0-9]+)?)")
         
-        // 一般的なべき乗（^）
-        while (result.contains("^")) {
-            val index = result.indexOf("^")
+        while (powerPattern.containsMatchIn(result)) {
+            val match = powerPattern.find(result)!!
+            val base = match.groupValues[1].toDouble()
+            val exponent = match.groupValues[2].toDouble()
             
-            // 基数を取得
-            var baseStart = index - 1
-            var parenCount = 0
-            while (baseStart >= 0) {
-                val char = result[baseStart]
-                if (char == ')') parenCount++
-                else if (char == '(') parenCount--
-                
-                if (parenCount == 0 && (char in setOf('+', '-', '*', '/', '(') && baseStart < index - 1)) {
-                    baseStart++
-                    break
-                }
-                baseStart--
-            }
-            if (baseStart < 0) baseStart = 0
-            
-            // 指数を取得
-            var expEnd = index + 1
-            parenCount = 0
-            if (expEnd < result.length && result[expEnd] == '(') {
-                parenCount = 1
-                expEnd++
-                while (expEnd < result.length && parenCount > 0) {
-                    when (result[expEnd]) {
-                        '(' -> parenCount++
-                        ')' -> parenCount--
-                    }
-                    expEnd++
-                }
-            } else {
-                while (expEnd < result.length && 
-                       (result[expEnd].isDigit() || result[expEnd] == '.' || 
-                        (expEnd == index + 1 && result[expEnd] == '-'))) {
-                    expEnd++
-                }
-            }
-            
-            val base = result.substring(baseStart, index)
-            val exponent = result.substring(index + 1, expEnd)
-                .removeSurrounding("(", ")")
-            
-            val baseValue = evaluateExpression(base)
-            val expValue = evaluateExpression(exponent)
-            val powerResult = baseValue.pow(expValue)
-            
-            result = result.substring(0, baseStart) + 
-                    powerResult.toString() + 
-                    result.substring(expEnd)
+            val powerResult = base.pow(exponent)
+            result = result.replace(match.value, toPlainNumberString(powerResult))
         }
         
         return result
@@ -509,9 +533,9 @@ class CalculationEngine {
      */
     private fun formatResult(result: Double): String {
         return when {
-            result == result.toLong().toDouble() -> result.toLong().toString()
+            result == result.toLong().toDouble() -> toPlainNumberString(result)
             abs(result) < 1e-10 -> "0"
-            else -> String.format("%.10g", result)
+            else -> toPlainNumberString(result)
         }
     }
 }

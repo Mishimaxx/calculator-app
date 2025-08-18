@@ -13,4 +13,18 @@ class SimpleTest {
         println("Result for empty string: '$result'")
         assertEquals("Error", result)
     }
+
+    @Test
+    fun `上付きべき乗 7⁹`() {
+        val calculationEngine = CalculationEngine()
+        val result = calculationEngine.evaluate("7⁹")
+        assertEquals("40353607", result)
+    }
+
+    @Test
+    fun `上付きべき乗 8⁹`() {
+        val calculationEngine = CalculationEngine()
+        val result = calculationEngine.evaluate("8⁹")
+        assertEquals("134217728", result)
+    }
 }

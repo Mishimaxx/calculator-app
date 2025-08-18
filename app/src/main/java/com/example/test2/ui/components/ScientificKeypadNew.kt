@@ -78,14 +78,11 @@ fun CasioScientificKeypad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            // 一般べき乗 x^y
             CalculatorButton(
-                text = if (showSecondFunction) "x√y" else "xy",
-                onClick = { 
-                    if (showSecondFunction) {
-                        viewModel.onScientificFunctionClicked("x√y")
-                    } else {
-                        viewModel.onScientificFunctionClicked("x^y")
-                    }
+                text = "xʸ",
+                onClick = {
+                    viewModel.onScientificFunctionClicked("^")
                     showSecondFunction = false
                 },
                 modifier = Modifier.weight(1f),
