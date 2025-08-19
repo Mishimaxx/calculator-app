@@ -23,6 +23,8 @@ fun ScientificKeypad(
     // 黒ベースのカラーパレット
     val mediumGray = Color(0xFF3A3A3C)
     val darkGray = mediumGray // 数字ボタンと同じ色に統一
+    // 下段用（より暗め）
+    val bottomDark = Color(0xFF2C2C2E)
     val lightGray = Color(0xFF505052)
     val redAccent = Color(0xFFFF6B6B) // 演算子用の赤色
     val whiteText = Color.White
@@ -35,36 +37,72 @@ fun ScientificKeypad(
             .padding(2.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        
-        // 関数ボタン部分（全体で一つのスクロール領域、複数行）
+        // 上段: 矢印カーソルキー行
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                // 1行目: SOLVE、CALC、基本関数
+            CalculatorButton(
+                text = "←",
+                onClick = { viewModel.onArrowClicked("LEFT") },
+                modifier = Modifier.weight(1f),
+                backgroundColor = darkGray,
+                textColor = redAccent,
+                fontSize = 20.sp,
+                height = 48.dp
+            )
+            CalculatorButton(
+                text = "↑",
+                onClick = { viewModel.onArrowClicked("UP") },
+                modifier = Modifier.weight(1f),
+                backgroundColor = darkGray,
+                textColor = redAccent,
+                fontSize = 20.sp,
+                height = 48.dp
+            )
+            CalculatorButton(
+                text = "↓",
+                onClick = { viewModel.onArrowClicked("DOWN") },
+                modifier = Modifier.weight(1f),
+                backgroundColor = darkGray,
+                textColor = redAccent,
+                fontSize = 20.sp,
+                height = 48.dp
+            )
+            CalculatorButton(
+                text = "→",
+                onClick = { viewModel.onArrowClicked("RIGHT") },
+                modifier = Modifier.weight(1f),
+                backgroundColor = darkGray,
+                textColor = redAccent,
+                fontSize = 20.sp,
+                height = 48.dp
+            )
+        }
+
+    // 関数ボタン部分（横スクロールなし。画面幅に敷き詰め）
+    Column(
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+                // 1行目: 基本関数
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     
+                    // 一般根号（x上付きの√y）
                     CalculatorButton(
-                        text = "∫",
-                        onClick = { viewModel.onScientificFunctionClicked("integral") },
-                        modifier = Modifier.width(65.dp),
+                        text = "ˣ√y",
+                        onClick = { viewModel.onScientificFunctionClicked("xroot") },
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
-                        fontSize = 24.sp,
+                        fontSize = 20.sp,
                         height = 60.dp
                     )
                     
                     CalculatorButton(
                         text = "x!",
                         onClick = { viewModel.onScientificFunctionClicked("!") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 20.sp,
@@ -74,7 +112,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "x⁻¹",
                         onClick = { viewModel.onScientificFunctionClicked("1/x") },
-                        modifier = Modifier.width(75.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -84,7 +122,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "√x",
                         onClick = { viewModel.onScientificFunctionClicked("sqrt") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 20.sp,
@@ -94,7 +132,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "x²",
                         onClick = { viewModel.onScientificFunctionClicked("^2") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 20.sp,
@@ -104,7 +142,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "x³",
                         onClick = { viewModel.onScientificFunctionClicked("^3") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 20.sp,
@@ -115,7 +153,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "xʸ",
                         onClick = { viewModel.onScientificFunctionClicked("^") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 20.sp,
@@ -132,7 +170,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "log",
                         onClick = { viewModel.onScientificFunctionClicked("log") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -142,7 +180,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "ln",
                         onClick = { viewModel.onScientificFunctionClicked("ln") },
-                        modifier = Modifier.width(60.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -152,7 +190,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "10ˣ",
                         onClick = { viewModel.onScientificFunctionClicked("10^x") },
-                        modifier = Modifier.width(75.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -162,7 +200,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "eˣ",
                         onClick = { viewModel.onScientificFunctionClicked("e^x") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 17.sp,
@@ -172,7 +210,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "x⁻³",
                         onClick = { viewModel.onScientificFunctionClicked("^-3") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -182,7 +220,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "π",
                         onClick = { viewModel.onNumberClicked("3.141592654") },
-                        modifier = Modifier.width(55.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 24.sp,
@@ -192,7 +230,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "e",
                         onClick = { viewModel.onNumberClicked("2.718281828") },
-                        modifier = Modifier.width(55.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 24.sp,
@@ -216,7 +254,7 @@ fun ScientificKeypad(
                             }
                             isHypMode = false
                         },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -233,7 +271,7 @@ fun ScientificKeypad(
                             }
                             isHypMode = false
                         },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -243,7 +281,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "tan",
                         onClick = { viewModel.onScientificFunctionClicked("tan") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 18.sp,
@@ -253,7 +291,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "asin",
                         onClick = { viewModel.onScientificFunctionClicked("asin") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -263,7 +301,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "acos",
                         onClick = { viewModel.onScientificFunctionClicked("acos") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -273,7 +311,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "atan",
                         onClick = { viewModel.onScientificFunctionClicked("atan") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -290,7 +328,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "sinh",
                         onClick = { viewModel.onScientificFunctionClicked("sinh") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -300,7 +338,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "cosh",
                         onClick = { viewModel.onScientificFunctionClicked("cosh") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -310,7 +348,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "tanh",
                         onClick = { viewModel.onScientificFunctionClicked("tanh") },
-                        modifier = Modifier.width(70.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 16.sp,
@@ -320,7 +358,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "nPr",
                         onClick = { viewModel.onOperatorClicked("nPr") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 17.sp,
@@ -330,7 +368,7 @@ fun ScientificKeypad(
                     CalculatorButton(
                         text = "nCr",
                         onClick = { viewModel.onOperatorClicked("nCr") },
-                        modifier = Modifier.width(65.dp),
+            modifier = Modifier.weight(1f),
                         backgroundColor = darkGray,
                         textColor = redAccent,
                         fontSize = 17.sp,
@@ -338,9 +376,8 @@ fun ScientificKeypad(
                     )
                     
                     
-                }
-            }
         }
+    }
         
         // 括弧とメモリ関連ボタン
         Row(
@@ -407,7 +444,7 @@ fun ScientificKeypad(
                 text = "7",
                 onClick = { viewModel.onNumberClicked("7") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -417,7 +454,7 @@ fun ScientificKeypad(
                 text = "8",
                 onClick = { viewModel.onNumberClicked("8") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -427,7 +464,7 @@ fun ScientificKeypad(
                 text = "9",
                 onClick = { viewModel.onNumberClicked("9") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -437,7 +474,7 @@ fun ScientificKeypad(
                 text = "DEL",
                 onClick = { viewModel.onBackspaceClicked() },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 16.sp,
                 height = 65.dp
@@ -447,7 +484,7 @@ fun ScientificKeypad(
                 text = "AC",
                 onClick = { viewModel.onClearClicked() },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 16.sp,
                 height = 65.dp
@@ -463,7 +500,7 @@ fun ScientificKeypad(
                 text = "4",
                 onClick = { viewModel.onNumberClicked("4") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -473,7 +510,7 @@ fun ScientificKeypad(
                 text = "5",
                 onClick = { viewModel.onNumberClicked("5") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -483,7 +520,7 @@ fun ScientificKeypad(
                 text = "6",
                 onClick = { viewModel.onNumberClicked("6") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -493,7 +530,7 @@ fun ScientificKeypad(
                 text = "×",
                 onClick = { viewModel.onOperatorClicked("*") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = darkGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -503,7 +540,7 @@ fun ScientificKeypad(
                 text = "÷",
                 onClick = { viewModel.onOperatorClicked("/") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = darkGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -519,7 +556,7 @@ fun ScientificKeypad(
                 text = "1",
                 onClick = { viewModel.onNumberClicked("1") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -529,7 +566,7 @@ fun ScientificKeypad(
                 text = "2",
                 onClick = { viewModel.onNumberClicked("2") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -539,7 +576,7 @@ fun ScientificKeypad(
                 text = "3",
                 onClick = { viewModel.onNumberClicked("3") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -549,7 +586,7 @@ fun ScientificKeypad(
                 text = "+",
                 onClick = { viewModel.onOperatorClicked("+") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = darkGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -559,7 +596,7 @@ fun ScientificKeypad(
                 text = "-",
                 onClick = { viewModel.onOperatorClicked("-") },
                 modifier = Modifier.weight(1f),
-                backgroundColor = darkGray,
+                backgroundColor = bottomDark,
                 textColor = redAccent,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -575,7 +612,7 @@ fun ScientificKeypad(
                 text = "0",
                 onClick = { viewModel.onNumberClicked("0") },
                 modifier = Modifier.weight(2f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp
@@ -585,7 +622,7 @@ fun ScientificKeypad(
                 text = ".",
                 onClick = { viewModel.onDecimalClicked() },
                 modifier = Modifier.weight(1f),
-                backgroundColor = mediumGray,
+                backgroundColor = bottomDark,
                 textColor = whiteText,
                 fontSize = 24.sp,
                 height = 65.dp

@@ -32,6 +32,11 @@ class CalculationEngine {
             
             // 関数を処理
             processedExpression = processFunctions(processedExpression)
+
+            // 未処理の英字（未完の関数呼び出しなど）が残っている場合は評価せず終了
+            if (processedExpression.any { it.isLetter() }) {
+                return "Error"
+            }
             
             val result = evaluateExpression(processedExpression)
             
@@ -104,10 +109,10 @@ class CalculationEngine {
             }
         }
 
-        // 孤立した上付き（基数無し）については安全のため通常数字へ（³√は維持）
-        res = res.replace(Regex("(?!³√)[²³]")) { mr ->
-            if (mr.value == "²") "^2" else if (mr.value == "³") "^3" else mr.value
-        }
+    // 孤立した上付き（基数無し）については安全のため通常数字や^記法へ
+    // ただし「²√」「³√」のように直後が根号の場合は変換しない（n√yの指数として扱う）
+    res = res.replace(Regex("²(?!√)")) { "^2" }
+    res = res.replace(Regex("³(?!√)")) { "^3" }
         res = res.replace("⁻¹", "^-1").replace("⁻³", "^-3")
         res = res.replace('⁰', '0').replace('¹', '1').replace('⁴', '4')
             .replace('⁵', '5').replace('⁶', '6').replace('⁷', '7').replace('⁸', '8').replace('⁹', '9')
@@ -209,6 +214,19 @@ class CalculationEngine {
     private fun processSquareRoot(expression: String): String {
         var result = expression
         
+        // 一般の n√y パターン: 数字(インデックス) + √ + 数字
+        // 例: 4√16 -> 2, 5√32 -> 2
+        val nRootPattern = "(\\d+)√([\\d.]+)".toRegex()
+        while (nRootPattern.containsMatchIn(result)) {
+            val match = nRootPattern.find(result)!!
+            val n = match.groupValues[1].toInt()
+            val number = match.groupValues[2].toDouble()
+            val value = try {
+                if (n <= 0) Double.NaN else number.pow(1.0 / n)
+            } catch (_: Exception) { Double.NaN }
+            result = result.replace(match.value, toPlainNumberString(value))
+        }
+        
         // √ パターン: √ + 数字
         val sqrtPattern = "√([\\d.]+)".toRegex()
         while (sqrtPattern.containsMatchIn(result)) {
@@ -282,8 +300,9 @@ class CalculationEngine {
     fun cos(value: Double): Double = kotlin.math.cos(toRadians(value))
     fun tan(value: Double): Double = kotlin.math.tan(toRadians(value))
     
-    fun asin(value: Double): Double = fromRadians(kotlin.math.asin(value))
-    fun acos(value: Double): Double = fromRadians(kotlin.math.acos(value))
+    // 逆三角は入力を[-1,1]にクランプして丸め誤差起因のNaNを回避
+    fun asin(value: Double): Double = fromRadians(kotlin.math.asin(value.coerceIn(-1.0, 1.0)))
+    fun acos(value: Double): Double = fromRadians(kotlin.math.acos(value.coerceIn(-1.0, 1.0)))
     fun atan(value: Double): Double = fromRadians(kotlin.math.atan(value))
     
     fun sinh(value: Double): Double = kotlin.math.sinh(value)
@@ -532,10 +551,13 @@ class CalculationEngine {
      * 結果をフォーマット
      */
     private fun formatResult(result: Double): String {
-        return when {
-            result == result.toLong().toDouble() -> toPlainNumberString(result)
-            abs(result) < 1e-10 -> "0"
-            else -> toPlainNumberString(result)
+        // ほぼ整数の値は整数にスナップ（例: 30.000000000000004 → 30）
+        val nearest = result.roundToLong().toDouble()
+        if (abs(result - nearest) < 1e-12) {
+            return toPlainNumberString(nearest)
         }
+        // 極小値は0に丸め
+        if (abs(result) < 1e-12) return "0"
+        return toPlainNumberString(result)
     }
 }

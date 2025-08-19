@@ -7,7 +7,38 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.flow.emptyFlow
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -35,6 +66,9 @@ import kotlin.math.min
 fun CalculatorDisplay(
     displayText: String,
     expression: String,
+    expressionField: TextFieldValue? = null,
+    onExpressionEdited: ((TextFieldValue) -> Unit)? = null,
+    onArrowKey: ((String) -> Unit)? = null,
     previewResult: String = "",
     isResultShowing: Boolean = false,
     modifier: Modifier = Modifier
@@ -71,7 +105,7 @@ fun CalculatorDisplay(
     // 未入力のプレースホルダーが含まれているかチェック（数字なしの場合のみ）
     fun hasUnfilledPlaceholder(text: String): Boolean {
         // 既に□が含まれている場合は、未入力のプレースホルダーとして扱う
-        if (text.contains("□") || text.contains("▫")) {
+        if (text.contains("□")) {
             return true
         }
         
@@ -91,7 +125,7 @@ fun CalculatorDisplay(
     // 必要に応じてプレースホルダーを追加
     fun addPlaceholderIfNeeded(text: String): String {
         // 既にプレースホルダーがある場合はそのまま返す（重複を防ぐ）
-        if (text.contains("□") || text.contains("▫")) {
+        if (text.contains("□")) {
             return text
         }
         
@@ -102,8 +136,8 @@ fun CalculatorDisplay(
             text == "⁻¹" -> "□⁻¹"
             text == "⁻³" -> "□⁻³"
             
-            // 階乗（数字がない場合のみ）
-            text == "!" -> "□!"
+            // 階乗（数字がない場合のみ）: ViewModel側で基数チェック済みのため、ここでは変換しない
+            text == "!" -> "!"
             
             // 三角関数（開き括弧のみの場合）
             text == "sin(" -> "sin(□"
@@ -172,11 +206,305 @@ fun CalculatorDisplay(
             Spacer(modifier = Modifier.weight(1f))
 
             // 式表示部分
-            if (expression.isNotEmpty()) {
-                val formattedExpression = formatExpressionSpacing(expression)
+            val exprText = expression
+            val expressionFontSize = calculateFontSize(exprText, if (isResultShowing) 18f else 32f, 30)
+            if (onExpressionEdited != null && expressionField != null) {
+                // 直接編集可能（キャレット/選択有効）
+                // 視覚変換: 入力テキストの * と / を × と ÷ に置換（テキスト値は保持）
+                val operatorVisualTransformation = remember {
+                    VisualTransformation { text ->
+                        val raw = text.text
+                        // 文字列を走査しながら視覚文字列を構築し、同時にオフセット対応セグメントを記録
+                        data class Seg(val oStart: Int, val oEnd: Int, val tStart: Int, val tEnd: Int)
+                        val segs = mutableListOf<Seg>()
+                        val sb = StringBuilder()
+                        // 上付きスタイル適用範囲（生成文字列側のインデックス）
+                        val supRanges = mutableListOf<Pair<Int, Int>>()
+                        var i = 0
+                        fun emit(consumed: Int, producedStr: String, sup: Boolean = false) {
+                            val tStart = sb.length
+                            sb.append(producedStr)
+                            val tEnd = sb.length
+                            segs += Seg(i, i + consumed, tStart, tEnd)
+                            if (sup) supRanges += (tStart to tEnd)
+                            i += consumed
+                        }
+                        fun hasBaseChar(idxBeforeCaret: Int): Boolean {
+                            if (idxBeforeCaret < 0) return false
+                            val pc = raw[idxBeforeCaret]
+                            return pc.isDigit() || pc == ')' || pc == 'π' || pc == 'e' || "⁰¹²³⁴⁵⁶⁷⁸⁹".contains(pc)
+                        }
+                        while (i < raw.length) {
+                            // 先に三文字の演算子表現 " <op> " をスペース無しに潰す
+                            if (i + 3 <= raw.length) {
+                                val tri = raw.substring(i, i + 3)
+                                when (tri) {
+                                    " + " -> { emit(3, "+"); continue }
+                                    " - " -> { emit(3, "-"); continue }
+                                    " * " -> { emit(3, "×"); continue }
+                                    " / " -> { emit(3, "÷"); continue }
+                                }
+                            }
+                            // EXPの *10^ は '^' をここで消費しない："×10"を出し、次の '^' で□/上付きへ
+                            if (i + 4 <= raw.length && raw.substring(i, i + 4) == "*10^") {
+                                // 消費は3（"*10"）、次ループで '^' を一般の^ハンドラに任せる
+                                emit(3, "×10")
+                                continue
+                            }
+                            // 同長置換: * と / を × ÷ へ
+                            val c = raw[i]
+                            if (c == '*') { emit(1, "×"); continue }
+                            if (c == '/') { emit(1, "÷"); continue }
+                            // 通常の数値トークンに3桁区切りを適用（指数は別処理済みなのでここには来ない）
+                            if (c.isDigit()) {
+                                var j = i
+                                // 整数部
+                                while (j < raw.length && raw[j].isDigit()) j++
+                                // 小数点・小数部（途中の"."だけでも維持）
+                                if (j < raw.length && raw[j] == '.') {
+                                    j++
+                                    while (j < raw.length && raw[j].isDigit()) j++
+                                }
+                                val token = raw.substring(i, j)
+                                fun groupIntPart(num: String): String {
+                                    val dotIdx = num.indexOf('.')
+                                    val intPart = if (dotIdx >= 0) num.substring(0, dotIdx) else num
+                                    val decPart = if (dotIdx >= 0) num.substring(dotIdx) else ""
+                                    val groupedInt = intPart.reversed().chunked(3).joinToString(",").reversed()
+                                    return groupedInt + decPart
+                                }
+                                val produced = groupIntPart(token)
+                                emit(j - i, produced)
+                                continue
+                            }
+                            // 上付き視覚変換（長さが変わる）
+                            if (i + 3 <= raw.length && raw.substring(i, i + 3) == "^-1") {
+                                val withBase = hasBaseChar(i - 1)
+                                emit(3, if (withBase) "⁻¹" else "□⁻¹", sup = true)
+                                continue
+                            }
+                            if (i + 3 <= raw.length && raw.substring(i, i + 3) == "^-3") {
+                                val withBase = hasBaseChar(i - 1)
+                                emit(3, if (withBase) "⁻³" else "□⁻³", sup = true)
+                                continue
+                            }
+                            if (i + 2 <= raw.length && raw.substring(i, i + 2) == "^2") {
+                                val withBase = hasBaseChar(i - 1)
+                                emit(2, if (withBase) "²" else "□²", sup = true)
+                                continue
+                            }
+                            if (i + 2 <= raw.length && raw.substring(i, i + 2) == "^3") {
+                                val withBase = hasBaseChar(i - 1)
+                                emit(2, if (withBase) "³" else "□³", sup = true)
+                                continue
+                            }
+                            // 一般の ^<符号付き数字列> を検出し、^ を隠して以降を上付き表示
+                            if (raw[i] == '^') {
+                                val withBase = hasBaseChar(i - 1)
+                                var j = i + 1
+                                // 先頭だけ負号許可
+                                if (j < raw.length && raw[j] == '-') j++
+                                var consumed = 0
+                                while (j + consumed < raw.length && raw[j + consumed].isDigit()) consumed++
+                                if (consumed > 0) {
+                                    val hasMinus = (i + 1 < raw.length && raw[i + 1] == '-')
+                                    val segEnd = (i + 1) + (if (hasMinus) 1 else 0) + consumed
+                                    val seg = raw.substring(i + 1, segEnd)
+                                    val sup = buildString {
+                                        for (c in seg) {
+                                            val mapped = when (c) {
+                                                '0' -> '⁰'
+                                                '1' -> '¹'
+                                                '2' -> '²'
+                                                '3' -> '³'
+                                                '4' -> '⁴'
+                                                '5' -> '⁵'
+                                                '6' -> '⁶'
+                                                '7' -> '⁷'
+                                                '8' -> '⁸'
+                                                '9' -> '⁹'
+                                                '-' -> '⁻'
+                                                else -> c
+                                            }
+                                            append(mapped)
+                                        }
+                                    }
+                                    val consumedTotal = 1 + (if (hasMinus) 1 else 0) + consumed
+                                    emit(consumedTotal, if (withBase) sup else "□$sup", sup = true)
+                                    continue
+                                } else {
+                                    // まだ指数が未入力なら、上付きプレースホルダのみ表示
+                                    emit(1, "□", sup = true)
+                                    continue
+                                }
+                            }
+                            // それ以外は1文字そのまま
+                            emit(1, c.toString())
+                        }
+                        val vis = sb.toString()
+                        val annotated = buildAnnotatedString {
+                            append(vis)
+                            // 上付き領域にスタイルを適用
+                            supRanges.forEach { (s, e) ->
+                                addStyle(SuperscriptStyle, s, e)
+                            }
+                        }
+                        // オフセットマッピング: セグメント列に基づき相互変換
+                        val mapping = object : OffsetMapping {
+                            override fun originalToTransformed(offset: Int): Int {
+                                if (segs.isEmpty()) return offset
+                                var accO = 0
+                                var accT = 0
+                                for (s in segs) {
+                                    val oLen = s.oEnd - s.oStart
+                                    val tLen = s.tEnd - s.tStart
+                                    if (offset <= s.oStart) return accT + (offset - accO)
+                                    if (offset <= s.oEnd) {
+                                        return if (oLen == tLen) {
+                                            s.tStart + (offset - s.oStart)
+                                        } else {
+                                            // 置換中は末尾にスナップ
+                                            s.tEnd
+                                        }
+                                    }
+                                    accO = s.oEnd
+                                    accT = s.tEnd
+                                }
+                                // 最後を超える場合は末尾へ
+                                return accT + (offset - accO)
+                            }
+                            override fun transformedToOriginal(offset: Int): Int {
+                                if (segs.isEmpty()) return offset
+                                var accO = 0
+                                var accT = 0
+                                for (s in segs) {
+                                    val oLen = s.oEnd - s.oStart
+                                    val tLen = s.tEnd - s.tStart
+                                    if (offset <= s.tStart) return accO + (offset - accT)
+                                    if (offset <= s.tEnd) {
+                                        return if (oLen == tLen) {
+                                            s.oStart + (offset - s.tStart)
+                                        } else {
+                                            // 置換中は元の末尾にスナップ
+                                            s.oEnd
+                                        }
+                                    }
+                                    accO = s.oEnd
+                                    accT = s.tEnd
+                                }
+                                return accO + (offset - accT)
+                            }
+                        }
+                        TransformedText(annotated, mapping)
+                    }
+                }
+                val focusRequester = remember { FocusRequester() }
+                val context = LocalContext.current
+                val view = LocalView.current
+                val keyboardController = LocalSoftwareKeyboardController.current
+                
+                
+                LaunchedEffect(Unit) {
+                    // 複数段階でキーボードを隠す
+                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    
+                    // 段階1: 全ての方法でキーボードを隠す
+                    keyboardController?.hide()
+                    imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_IMPLICIT_ONLY)
+                    imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                    imm.hideSoftInputFromWindow(view.windowToken, 0)
+                    
+                    kotlinx.coroutines.delay(100)
+                    
+                    // 段階2: フォーカス取得
+                    focusRequester.requestFocus()
+                    
+                    // 段階3: フォーカス直後に即座に再度隠す
+                    kotlinx.coroutines.delay(1)
+                    keyboardController?.hide()
+                    imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_IMPLICIT_ONLY)
+                    imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                    imm.hideSoftInputFromWindow(view.windowToken, 0)
+                    
+                    // 段階4: 念押しでもう一度
+                    kotlinx.coroutines.delay(50)
+                    keyboardController?.hide()
+                    imm.hideSoftInputFromWindow(view.windowToken, 0)
+                }
+                
+                BasicTextField(
+                    value = expressionField,
+                    onValueChange = { newValue ->
+                        // キーボードが出ようとしたら即座に隠す - 複数の方法で確実に
+                        keyboardController?.hide()
+                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                        imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_IMPLICIT_ONLY)
+                        imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                        imm.hideSoftInputFromWindow(view.windowToken, 0)
+                        onExpressionEdited?.invoke(newValue)
+                    },
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = expressionFontSize.sp,
+                        color = textColor,
+                        textAlign = TextAlign.End,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = if (isResultShowing) FontWeight.Normal else FontWeight.Bold,
+                        lineHeight = (expressionFontSize * 0.9f).sp
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { focusState ->
+                            // フォーカス時に即座にキーボードを隠す - あらゆる方法で
+                            keyboardController?.hide()
+                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_IMPLICIT_ONLY)
+                            imm.hideSoftInputFromWindow(view.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+                            imm.hideSoftInputFromWindow(view.windowToken, 0)
+                        }
+                        .pointerInput(Unit) {
+                            // タッチイベントを検出してもキーボードを隠す
+                            detectTapGestures {
+                                keyboardController?.hide()
+                                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                imm.hideSoftInputFromWindow(view.windowToken, 0)
+                            }
+                        },
+                    readOnly = false,
+                    singleLine = false,
+                    maxLines = 2,
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(textColor),
+                    visualTransformation = operatorVisualTransformation,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Unspecified,
+                        imeAction = ImeAction.None,
+                        autoCorrect = false
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onAny = {
+                            keyboardController?.hide()
+                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.hideSoftInputFromWindow(view.windowToken, 0)
+                        }
+                    ),
+                    interactionSource = remember { 
+                        object : MutableInteractionSource {
+                            override val interactions = emptyFlow<androidx.compose.foundation.interaction.Interaction>()
+                            override suspend fun emit(interaction: androidx.compose.foundation.interaction.Interaction) {
+                                // キーボードを隠す
+                                keyboardController?.hide()
+                            }
+                            override fun tryEmit(interaction: androidx.compose.foundation.interaction.Interaction): Boolean {
+                                // キーボードを隠す
+                                keyboardController?.hide()
+                                return true
+                            }
+                        }
+                    }
+                )
+            } else if (exprText.isNotEmpty()) {
+                val formattedExpression = formatExpressionSpacing(exprText)
                 val annotatedExpression = buildAnnotatedSuperscripts(formattedExpression, SuperscriptStyle)
-                // 式入力時は式を大きく強調、結果表示時は小さく
-                val expressionFontSize = calculateFontSize(formattedExpression, if (isResultShowing) 18f else 32f, 30)
                 Text(
                     text = annotatedExpression,
                     fontSize = expressionFontSize.sp,
@@ -185,7 +513,6 @@ fun CalculatorDisplay(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     fontFamily = FontFamily.Monospace,
-                    // 式入力時は太字で強調
                     fontWeight = if (isResultShowing) FontWeight.Normal else FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
                     lineHeight = (expressionFontSize * 0.9f).sp
@@ -209,7 +536,7 @@ fun CalculatorDisplay(
                         } else resultText
 
                         // EXP起因の '*10^' を表示用の '×10' に変換（'^'は注釈ビルダーで処理）
-                        val displayLine = displayLineRaw
+                        val displayLine = formatExpressionSpacing(displayLineRaw)
                             .replace("*10^", "×10^")
                             .replace("*", "×")
                             .replace("/", "÷")
@@ -319,36 +646,30 @@ fun CalculatorDisplay(
         }
 
         // 表示用の文字列中に含まれる上付き（⁰¹²…や⁻）の連続を検出し、通常数字へ戻してBaselineShiftで統一表示
-        private fun buildAnnotatedSuperscripts(input: String, supStyle: SpanStyle): AnnotatedString {
+    private fun buildAnnotatedSuperscripts(input: String, supStyle: SpanStyle): AnnotatedString {
             val supSet = setOf('⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹','⁻')
-            val expCharSet = setOf('0','1','2','3','4','5','6','7','8','9','-','⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹','⁻','□','▫')
+            val expCharSet = setOf('0','1','2','3','4','5','6','7','8','9','-','⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹','⁻','□')
             return buildAnnotatedString {
                 var i = 0
                 while (i < input.length) {
-                    // 0-1) ×10^ の後ろは '^' をスキップし、以降を上付き
-                    if (i + 4 <= input.length && input.substring(i, i + 4) == "×10^") {
-                        append("×10")
-                        i += 4 // skip "×10^"
-                        val start = i
-                        var j = i
-                        while (j < input.length && input[j] in expCharSet) j++
-                        val segment = input.substring(start, j)
-                        withStyle(supStyle) { append(segment) }
-                        i = j
-                        continue
-                    }
-                    // 0) ×10 の後ろは上付き
+                    // 0-1) ×10 の直後に '^' があれば隠して、以降を上付き
                     if (input.startsWith("×10", i)) {
                         append("×10")
                         i += 3
+                        if (i < input.length && input[i] == '^') {
+                            i += 1 // '^' を隠す
+                        }
                         val start = i
                         var j = i
                         while (j < input.length && input[j] in expCharSet) j++
                         val segment = input.substring(start, j)
-                        withStyle(supStyle) { append(segment) }
+                        if (segment.isNotEmpty()) {
+                            withStyle(supStyle) { append(segment) }
+                        }
                         i = j
                         continue
                     }
+                    // （上の分岐に統合）
                     // 1) 10^ または e^ を検出し、^ を隠して以降の連続を上付き描画
                     if (input.startsWith("10^", i)) {
                         append("10")
@@ -372,13 +693,40 @@ fun CalculatorDisplay(
                         i = j
                         continue
                     }
+                    
+                    // 1.5) 一般べき乗の^を検出し、隠して以降を上付き描画
+                    if (input[i] == '^') {
+                        i += 1 // skip "^"
+                        val start = i
+                        var j = i
+                        while (j < input.length && input[j] in expCharSet) j++
+                        val segment = input.substring(start, j)
+                        if (segment.isNotEmpty()) {
+                            withStyle(supStyle) { append(segment) }
+                        }
+                        i = j
+                        continue
+                    }
 
-                    // 2) 既に上付き文字（⁰-⁹/⁻）は通常数字に戻して上付き描画
+                    // 1.6) ベース直後の『□』は指数のプレースホルダーとして上付き描画
+                    if (input[i] == '□') {
+                        val prev = if (i > 0) input[i - 1] else null
+                        if (prev != null && (prev.isDigit() || prev == ')' || prev == 'π' || prev == 'e' || prev in supSet)) {
+                            val start = i
+                            var j = i
+                            while (j < input.length && input[j] == '□') j++
+                            withStyle(supStyle) { append(input.substring(start, j)) }
+                            i = j
+                            continue
+                        }
+                    }
+
+                    // 2) 既に上付き文字（⁰-⁹/⁻）は通常数字に戻して上付き描画（直後の□も同スタイルに含める）
                     val c = input[i]
                     if (c in supSet) {
                         val start = i
                         var j = i
-                        while (j < input.length && input[j] in supSet) j++
+                        while (j < input.length && (input[j] in supSet || input[j] == '□')) j++
                         val segment = input.substring(start, j)
                         withStyle(supStyle) {
                             segment.forEach { sc ->
@@ -394,7 +742,7 @@ fun CalculatorDisplay(
                                     '⁸' -> '8'
                                     '⁹' -> '9'
                                     '⁻' -> '-'
-                                    else -> sc
+                                    else -> sc // 『□』はそのまま描画
                                 }
                                 append(mapped)
                             }

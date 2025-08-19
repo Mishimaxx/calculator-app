@@ -208,8 +208,11 @@ fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
     ) {
         // 表示部分（結果画面を少し大きく）
         CalculatorDisplay(
-            displayText = viewModel.displayText.value,
+            displayText = viewModel.formattedDisplayText,
             expression = viewModel.displayExpression,
+            expressionField = viewModel.expressionField.value,
+            onExpressionEdited = { viewModel.onExpressionEdited(it) },
+            onArrowKey = { direction -> viewModel.onArrowClicked(direction) },
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
             modifier = Modifier.weight(0.4f) // 0.35fから0.4fに増加（結果画面を大きく）
@@ -231,8 +234,11 @@ fun ScientificCalculatorTab(viewModel: CalculatorViewModel) {
     ) {
         // 表示部分（関数電卓用）- より小さく
         CalculatorDisplay(
-            displayText = viewModel.displayText.value,
+            displayText = viewModel.formattedDisplayText,
             expression = viewModel.displayExpression,
+            expressionField = viewModel.expressionField.value,
+            onExpressionEdited = { viewModel.onExpressionEdited(it) },
+            onArrowKey = { direction -> viewModel.onArrowClicked(direction) },
             previewResult = viewModel.formattedPreviewResult,
             isResultShowing = viewModel.isResultShowing.value,
             modifier = Modifier.weight(0.2f) // 0.3fから0.2fに縮小
@@ -302,7 +308,8 @@ fun HistoryTab(viewModel: CalculatorViewModel) {
  * 数字を3桁区切りでフォーマットする
  */
 private fun formatNumberWithCommas(number: String): String {
-    if (number.isEmpty() || number == "Error" || number == "Division by Zero" || number == "Overflow Error") {
+    if (number.isEmpty() || number == "Error" || number == "Division by Zero" || number == "Overflow Error" || 
+        number == "数字から入力してください" || number == "Math Error") {
         return number
     }
     
