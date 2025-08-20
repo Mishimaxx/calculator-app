@@ -46,6 +46,7 @@ fun MainCalculatorScreen(
         0 -> "一般電卓"
         1 -> "関数電卓"
         2 -> "履歴"
+        3 -> "単位換算"
         else -> "一般電卓"
     }
 
@@ -103,6 +104,21 @@ fun MainCalculatorScreen(
                         selected = selectedTab == 2,
                         onClick = { 
                             selectedTab = 2
+                            scope.launch { drawerState.close() }
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            unselectedContainerColor = Color.Transparent
+                        ),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    
+                    NavigationDrawerItem(
+                        label = { Text("単位換算", color = if (isDarkTheme) Color.White else Color.Black) },
+                        selected = selectedTab == 3,
+                        onClick = { 
+                            selectedTab = 3
+                            viewModel.setCalculationType(CalculationType.UNIT_CONVERSION)
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
@@ -192,16 +208,26 @@ fun MainCalculatorScreen(
             Spacer(modifier = Modifier.height(8.dp)) // 16dpから8dpに縮小
 
             when (selectedTab) {
-                0 -> BasicCalculatorTab(viewModel)
+                0 -> BasicCalculatorTab(
+                    viewModel,
+                    onOpenUnitConversion = {
+                        selectedTab = 3
+                        viewModel.setCalculationType(com.example.test2.data.model.CalculationType.UNIT_CONVERSION)
+                    }
+                )
                 1 -> ScientificCalculatorTab(viewModel)
                 2 -> HistoryTab(viewModel)
+                3 -> UnitConversionTab(isDarkTheme, viewModel) {
+                    selectedTab = 0
+                    viewModel.setCalculationType(com.example.test2.data.model.CalculationType.BASIC)
+                }
             }
         }
     }
 }
 
 @Composable
-fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
+fun BasicCalculatorTab(viewModel: CalculatorViewModel, onOpenUnitConversion: (() -> Unit)? = null) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(4.dp) // 0dpから4dpに間隔を少し開ける
@@ -221,7 +247,7 @@ fun BasicCalculatorTab(viewModel: CalculatorViewModel) {
         // キーパッド（画面を埋めるように調整）
         BasicKeypad(
             viewModel = viewModel,
-            modifier = Modifier.weight(0.6f) // 0.65fから0.6fに調整
+            modifier = Modifier.weight(0.6f)
         )
     }
 }
@@ -302,6 +328,19 @@ fun HistoryTab(viewModel: CalculatorViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun UnitConversionTab(
+    isDarkTheme: Boolean = true,
+    viewModel: CalculatorViewModel,
+    onRequestOpenBasic: (() -> Unit)? = null
+) {
+    UnitConversionScreen(
+        isDarkTheme = isDarkTheme,
+        viewModel = viewModel,
+        onRequestOpenBasic = onRequestOpenBasic
+    )
 }
 
 /**

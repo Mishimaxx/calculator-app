@@ -74,6 +74,7 @@ fun HistoryItem(
                         CalculationType.BASIC -> "基本"
                         CalculationType.SCIENTIFIC -> "関数"
                         CalculationType.PROGRAMMER -> "進数"
+                        CalculationType.UNIT_CONVERSION -> "単位"
                     }
                     
                     Surface(

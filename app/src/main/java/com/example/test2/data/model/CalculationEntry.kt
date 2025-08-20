@@ -20,5 +20,6 @@ data class CalculationEntry(
 enum class CalculationType {
     BASIC,      // 基本四則演算
     SCIENTIFIC, // 科学計算（sin, cos, log等）
-    PROGRAMMER  // プログラマ向け（進数変換、ビット演算等）
+    PROGRAMMER, // プログラマ向け（進数変換、ビット演算等）
+    UNIT_CONVERSION // 単位換算
 }
