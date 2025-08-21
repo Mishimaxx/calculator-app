@@ -23,7 +23,7 @@ fun CalculatorButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color(0xFF505050), // グレー（数字ボタン用）
+    backgroundColor: Color = Color(0xFF3A3A3C), // 数字ボタンと統一
     textColor: Color = Color.White,
     isOperator: Boolean = false,
     isSpecial: Boolean = false,
