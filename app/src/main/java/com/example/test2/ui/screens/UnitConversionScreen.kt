@@ -100,14 +100,20 @@ fun UnitConversionScreen(
     val borderGray = if (isDarkTheme) Color(0xFF30363D) else Color(0xFFD1D9E0)
     val subtleText = if (isDarkTheme) Color(0xFF9AA4AE) else Color(0xFF6B7280)
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(if (isDarkTheme) Color(0xFF1C1C1E) else Color.White)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val scrollState = rememberScrollState()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(bottom = 300.dp) // 下部固定キーパッドとの重なり回避の余白
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
         // カテゴリ（元の配色に復帰）
         Card(
             colors = CardDefaults.cardColors(
@@ -373,18 +379,33 @@ fun UnitConversionScreen(
             )
         }
 
-        // 電卓（単位換算用専用キーパッド）
+        // （スクロール領域終わり）
+        }
+
+        // 下部固定キーパッド
         viewModel?.let { vm ->
-            UnitConversionKeypad(
-                viewModel = vm,
-                modifier = Modifier.fillMaxWidth(),
-                onRequestOpenBasic = { showBasicSheet = true },
-                onSwapUnits = {
-                    val tmp = fromUnit
-                    fromUnit = toUnit
-                    toUnit = tmp
+            Surface(
+                tonalElevation = 0.dp,
+                shadowElevation = 4.dp,
+                color = if (isDarkTheme) Color(0xFF1C1C1E) else Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+            ) {
+                Column(Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)) {
+                    UnitConversionKeypad(
+                        viewModel = vm,
+                        modifier = Modifier.fillMaxWidth(),
+                        onRequestOpenBasic = { showBasicSheet = true },
+                        onSwapUnits = {
+                            val tmp = fromUnit
+                            fromUnit = toUnit
+                            toUnit = tmp
+                        }
+                    )
+                    Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
                 }
-            )
+            }
         }
 
         // 開いたら必ずExpandedに
@@ -399,7 +420,6 @@ fun UnitConversionScreen(
                 onDismissRequest = { showBasicSheet = false },
                 sheetState = basicSheetState
             ) {
-                // 画面の約90%の高さを確保し、ナビゲーションバー分の余白も確保
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -408,7 +428,6 @@ fun UnitConversionScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 上: 表示（やや大きめ比率）
                     Box(modifier = Modifier.weight(0.35f).fillMaxWidth()) {
                         CalculatorDisplay(
                             displayText = viewModel.formattedDisplayText,
@@ -421,7 +440,6 @@ fun UnitConversionScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                    // 下: 基本キーパッド（全行表示）
                     Box(modifier = Modifier.weight(0.65f).fillMaxWidth()) {
                         BasicKeypad(
                             viewModel = viewModel,

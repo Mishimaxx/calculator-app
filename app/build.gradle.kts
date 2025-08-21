@@ -69,6 +69,7 @@ dependencies {
     // Architecture Components
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.navigation.compose)
+    implementation(libs.okhttp)
     
     // Room database
     implementation(libs.room.runtime)

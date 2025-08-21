@@ -49,7 +49,8 @@ fun MainCalculatorScreen(
         0 -> "一般電卓"
         1 -> "関数電卓"
         2 -> "単位換算"
-        3 -> "履歴"
+        3 -> "通貨換算"
+        4 -> "履歴"
         else -> "一般電卓"
     }
 
@@ -170,11 +171,12 @@ fun MainCalculatorScreen(
                             .padding(vertical = 2.dp)
                             .clip(RoundedCornerShape(12.dp))
                     )
-                    
+
+                    // 通貨換算（単位換算と同じ画面を利用）
                     NavigationDrawerItem(
                         label = { 
                             Text(
-                                text = "履歴",
+                                text = "通貨換算",
                                 color = if (selectedTab == 3) {
                                     if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
                                 } else {
@@ -188,6 +190,36 @@ fun MainCalculatorScreen(
                         selected = selectedTab == 3,
                         onClick = { 
                             selectedTab = 3
+                            // 通貨換算も履歴区別不要なら UNIT_CONVERSION を再利用
+                            viewModel.setCalculationType(CalculationType.UNIT_CONVERSION)
+                            scope.launch { drawerState.close() }
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF2D1B1B) else Color(0xFFFEE2E2),
+                            unselectedContainerColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    
+                    NavigationDrawerItem(
+                        label = { 
+                            Text(
+                                text = "履歴",
+                                color = if (selectedTab == 4) {
+                                    if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                } else {
+                                    if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F)
+                                },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (selectedTab == 4) FontWeight.Medium else FontWeight.Normal
+                                )
+                            )
+                        },
+                        selected = selectedTab == 4,
+                        onClick = { 
+                            selectedTab = 4
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
@@ -299,7 +331,11 @@ fun MainCalculatorScreen(
                     selectedTab = 0
                     viewModel.setCalculationType(com.example.test2.data.model.CalculationType.BASIC)
                 }
-                3 -> HistoryTab(viewModel)
+                3 -> CurrencyConversionTab(isDarkTheme, viewModel) {
+                    selectedTab = 0
+                    viewModel.setCalculationType(com.example.test2.data.model.CalculationType.BASIC)
+                }
+                4 -> HistoryTab(viewModel)
             }
         }
     }
@@ -416,6 +452,19 @@ fun UnitConversionTab(
     onRequestOpenBasic: (() -> Unit)? = null
 ) {
     UnitConversionScreen(
+        isDarkTheme = isDarkTheme,
+        viewModel = viewModel,
+        onRequestOpenBasic = onRequestOpenBasic
+    )
+}
+
+@Composable
+fun CurrencyConversionTab(
+    isDarkTheme: Boolean = true,
+    viewModel: CalculatorViewModel,
+    onRequestOpenBasic: (() -> Unit)? = null
+) {
+    CurrencyConversionScreen(
         isDarkTheme = isDarkTheme,
         viewModel = viewModel,
         onRequestOpenBasic = onRequestOpenBasic
