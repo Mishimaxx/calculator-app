@@ -4,14 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,8 +48,8 @@ fun MainCalculatorScreen(
     val calculatorName = when (selectedTab) {
         0 -> "一般電卓"
         1 -> "関数電卓"
-        2 -> "履歴"
-        3 -> "単位換算"
+        2 -> "単位換算"
+        3 -> "履歴"
         else -> "一般電卓"
     }
 
@@ -54,23 +57,47 @@ fun MainCalculatorScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = if (isDarkTheme) Color(0xFF1E1E1E) else Color.White,
+                drawerContainerColor = if (isDarkTheme) Color(0xFF0D1117) else Color(0xFFF6F8FA),
                 drawerContentColor = if (isDarkTheme) Color.White else Color.Black
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(top = 32.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
                 ) {
-                    Text(
-                        text = "電卓メニュー",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = if (isDarkTheme) Color.White else Color.Black,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    // ヘッダー部分をよりおしゃれに
+                    Column(
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    ) {
+                        Text(
+                            text = "Calculator",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                        )
+                        Text(
+                            text = "メニュー",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isDarkTheme) Color(0xFF8B949E) else Color(0xFF656D76),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                     
                     NavigationDrawerItem(
-                        label = { Text("一般電卓", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { 
+                            Text(
+                                text = "一般電卓",
+                                color = if (selectedTab == 0) {
+                                    if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                } else {
+                                    if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F)
+                                },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (selectedTab == 0) FontWeight.Medium else FontWeight.Normal
+                                )
+                            )
+                        },
                         selected = selectedTab == 0,
                         onClick = { 
                             selectedTab = 0
@@ -78,14 +105,28 @@ fun MainCalculatorScreen(
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF2D1B1B) else Color(0xFFFEE2E2),
                             unselectedContainerColor = Color.Transparent
                         ),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("関数電卓", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { 
+                            Text(
+                                text = "関数電卓",
+                                color = if (selectedTab == 1) {
+                                    if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                } else {
+                                    if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F)
+                                },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (selectedTab == 1) FontWeight.Medium else FontWeight.Normal
+                                )
+                            )
+                        },
                         selected = selectedTab == 1,
                         onClick = { 
                             selectedTab = 1
@@ -93,44 +134,75 @@ fun MainCalculatorScreen(
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF2D1B1B) else Color(0xFFFEE2E2),
                             unselectedContainerColor = Color.Transparent
                         ),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
                     
                     NavigationDrawerItem(
-                        label = { Text("履歴", color = if (isDarkTheme) Color.White else Color.Black) },
+                        label = { 
+                            Text(
+                                text = "単位換算",
+                                color = if (selectedTab == 2) {
+                                    if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                } else {
+                                    if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F)
+                                },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (selectedTab == 2) FontWeight.Medium else FontWeight.Normal
+                                )
+                            )
+                        },
                         selected = selectedTab == 2,
                         onClick = { 
                             selectedTab = 2
-                            scope.launch { drawerState.close() }
-                        },
-                        colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
-                            unselectedContainerColor = Color.Transparent
-                        ),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                    
-                    NavigationDrawerItem(
-                        label = { Text("単位換算", color = if (isDarkTheme) Color.White else Color.Black) },
-                        selected = selectedTab == 3,
-                        onClick = { 
-                            selectedTab = 3
                             viewModel.setCalculationType(CalculationType.UNIT_CONVERSION)
                             scope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = if (isDarkTheme) Color(0xFF6750A4).copy(alpha = 0.2f) else Color(0xFF6750A4).copy(alpha = 0.1f),
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF2D1B1B) else Color(0xFFFEE2E2),
                             unselectedContainerColor = Color.Transparent
                         ),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    
+                    NavigationDrawerItem(
+                        label = { 
+                            Text(
+                                text = "履歴",
+                                color = if (selectedTab == 3) {
+                                    if (isDarkTheme) Color(0xFFFF6B6B) else Color(0xFFDC2626)
+                                } else {
+                                    if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F)
+                                },
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = if (selectedTab == 3) FontWeight.Medium else FontWeight.Normal
+                                )
+                            )
+                        },
+                        selected = selectedTab == 3,
+                        onClick = { 
+                            selectedTab = 3
+                            scope.launch { drawerState.close() }
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = if (isDarkTheme) Color(0xFF2D1B1B) else Color(0xFFFEE2E2),
+                            unselectedContainerColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
                     
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        color = if (isDarkTheme) Color(0xFF444444) else Color(0xFFE0E0E0)
+                        modifier = Modifier.padding(vertical = 20.dp),
+                        color = if (isDarkTheme) Color(0xFF30363D) else Color(0xFFD1D9E0),
+                        thickness = 1.dp
                     )
                     
                     NavigationDrawerItem(
@@ -141,10 +213,15 @@ fun MainCalculatorScreen(
                                 Icon(
                                     imageVector = Icons.Default.Settings,
                                     contentDescription = "設定",
-                                    tint = if (isDarkTheme) Color.White else Color.Black
+                                    tint = if (isDarkTheme) Color(0xFF8B949E) else Color(0xFF656D76),
+                                    modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("設定", color = if (isDarkTheme) Color.White else Color.Black)
+                                Text(
+                                    text = "設定",
+                                    color = if (isDarkTheme) Color(0xFFC9D1D9) else Color(0xFF24292F),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
                             }
                         },
                         selected = false,
@@ -156,7 +233,9 @@ fun MainCalculatorScreen(
                             selectedContainerColor = Color.Transparent,
                             unselectedContainerColor = Color.Transparent
                         ),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
                 }
             }
@@ -211,16 +290,16 @@ fun MainCalculatorScreen(
                 0 -> BasicCalculatorTab(
                     viewModel,
                     onOpenUnitConversion = {
-                        selectedTab = 3
+                        selectedTab = 2
                         viewModel.setCalculationType(com.example.test2.data.model.CalculationType.UNIT_CONVERSION)
                     }
                 )
                 1 -> ScientificCalculatorTab(viewModel)
-                2 -> HistoryTab(viewModel)
-                3 -> UnitConversionTab(isDarkTheme, viewModel) {
+                2 -> UnitConversionTab(isDarkTheme, viewModel) {
                     selectedTab = 0
                     viewModel.setCalculationType(com.example.test2.data.model.CalculationType.BASIC)
                 }
+                3 -> HistoryTab(viewModel)
             }
         }
     }

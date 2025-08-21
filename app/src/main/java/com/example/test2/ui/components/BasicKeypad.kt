@@ -17,7 +17,8 @@ import com.example.test2.ui.viewmodel.CalculatorViewModel
 @Composable
 fun BasicKeypad(
     viewModel: CalculatorViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onEquals: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), // 横にパディングを追加して見切れを防ぐ
@@ -178,7 +179,10 @@ fun BasicKeypad(
             )
             CalculatorButton(
                 text = "=",
-                onClick = { viewModel.onEqualsClicked() },
+                onClick = {
+                    viewModel.onEqualsClicked()
+                    onEquals?.invoke()
+                },
                 modifier = Modifier.weight(1f),
                 isEquals = true
             )

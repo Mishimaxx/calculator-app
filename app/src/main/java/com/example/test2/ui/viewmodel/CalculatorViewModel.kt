@@ -672,7 +672,23 @@ class CalculatorViewModel(
     /**
      * 数字ボタンが押された時の処理
      */
+    // 現在の数値の桁数をチェック（12桁制限用）
+    private fun getCurrentNumberDigitCount(): Int {
+        val display = _displayText.value.replace(",", "")
+        val parts = display.split(".")
+        return parts[0].replace("-", "").length
+    }
+
     fun onNumberClicked(number: String) {
+        // 12桁制限チェック（単位変換モードの場合のみ）
+        if (_calculationType.value == CalculationType.UNIT_CONVERSION) {
+            val currentDigits = getCurrentNumberDigitCount()
+            val newDigits = if (number == "00") 2 else number.length
+            if (currentDigits + newDigits > 12) {
+                return // 12桁を超える場合は入力を拒否
+            }
+        }
+        
         // 1) 直前が結果表示なら、新しい計算として開始（以降の特殊分岐に入らない）
         if (_isResultShowing.value) {
             _displayText.value = number

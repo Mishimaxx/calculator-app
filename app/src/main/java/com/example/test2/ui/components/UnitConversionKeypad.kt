@@ -31,14 +31,15 @@ fun UnitConversionKeypad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            CalculatorButton("7", { viewModel.onNumberClicked("7") }, Modifier.weight(1f))
-            CalculatorButton("8", { viewModel.onNumberClicked("8") }, Modifier.weight(1f))
-            CalculatorButton("9", { viewModel.onNumberClicked("9") }, Modifier.weight(1f))
+            CalculatorButton("7", { viewModel.onNumberClicked("7") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("8", { viewModel.onNumberClicked("8") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("9", { viewModel.onNumberClicked("9") }, Modifier.weight(1f), height = 68.dp)
             CalculatorButton(
                 text = "⌫",
                 onClick = { viewModel.onBackspaceClicked() },
                 modifier = Modifier.weight(1f),
-                isSpecial = true
+                isSpecial = true,
+                height = 68.dp
             )
         }
 
@@ -47,14 +48,15 @@ fun UnitConversionKeypad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            CalculatorButton("4", { viewModel.onNumberClicked("4") }, Modifier.weight(1f))
-            CalculatorButton("5", { viewModel.onNumberClicked("5") }, Modifier.weight(1f))
-            CalculatorButton("6", { viewModel.onNumberClicked("6") }, Modifier.weight(1f))
+            CalculatorButton("4", { viewModel.onNumberClicked("4") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("5", { viewModel.onNumberClicked("5") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("6", { viewModel.onNumberClicked("6") }, Modifier.weight(1f), height = 68.dp)
             CalculatorButton(
                 text = "C",
                 onClick = { viewModel.onClearClicked() },
                 modifier = Modifier.weight(1f),
-                isSpecial = true
+                isSpecial = true,
+                height = 68.dp
             )
         }
 
@@ -63,30 +65,33 @@ fun UnitConversionKeypad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            CalculatorButton("1", { viewModel.onNumberClicked("1") }, Modifier.weight(1f))
-            CalculatorButton("2", { viewModel.onNumberClicked("2") }, Modifier.weight(1f))
-            CalculatorButton("3", { viewModel.onNumberClicked("3") }, Modifier.weight(1f))
+            CalculatorButton("1", { viewModel.onNumberClicked("1") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("2", { viewModel.onNumberClicked("2") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("3", { viewModel.onNumberClicked("3") }, Modifier.weight(1f), height = 68.dp)
             CalculatorButton(
                 text = "+  −\n×  =",
                 onClick = { onRequestOpenBasic?.invoke() },
                 modifier = Modifier.weight(1f),
                 isOperator = true,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                height = 68.dp
             )
         }
 
-        // 4行目: 00 0 . [1↕（通常配色に変更）]
+        // 4行目: 00 0 . [↕（赤文字）]
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            CalculatorButton("00", { viewModel.onNumberClicked("00") }, Modifier.weight(1f))
-            CalculatorButton("0", { viewModel.onNumberClicked("0") }, Modifier.weight(1f))
-            CalculatorButton(".", { viewModel.onDecimalClicked() }, Modifier.weight(1f))
+            CalculatorButton("00", { viewModel.onNumberClicked("00") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton("0", { viewModel.onNumberClicked("0") }, Modifier.weight(1f), height = 68.dp)
+            CalculatorButton(".", { viewModel.onDecimalClicked() }, Modifier.weight(1f), height = 68.dp)
             CalculatorButton(
-                text = "1↕",
+                text = "↕",
                 onClick = { onSwapUnits?.invoke() },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                isSpecial = true,
+                height = 68.dp
             )
         }
     }
